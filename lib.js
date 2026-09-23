@@ -40,10 +40,14 @@ export const ABI = {
     "function policy() view returns (uint8)",
     "function ceiling() view returns (uint256)",
     "function ceilingExpiry() view returns (uint256)",
-    "function raffleCount() view returns (uint256)",
-    "function raffles(uint256) view returns (uint256 tokenId, bytes32 root, uint256 totalTickets, uint64 publishedAt, uint64 drawBlock, uint256 winningTicket, bool drawn, bool claimed)",
-    "function claim(uint256 id, address account, uint256 start, uint256 end, bytes32[] proof)",
+    "function raffles() view returns (address)",
     "event Bought(address indexed marketplace, uint256 indexed tokenId, uint256 price)",
+  ]),
+  raffles: parseAbi([
+    "struct Raffle { uint256 tokenId; bytes32 root; uint256 totalTickets; uint64 publishedAt; uint64 drawBlock; uint256 winningTicket; bool drawn; bool claimed; }",
+    "function raffleCount(address vault) view returns (uint256)",
+    "function raffles(address vault, uint256 id) view returns (Raffle)",
+    "function claim(address vault, uint256 id, address account, uint256 start, uint256 end, bytes32[] proof)",
   ]),
   erc20: parseAbi(["function name() view returns (string)", "function symbol() view returns (string)"]),
   erc721: parseAbi([
@@ -204,11 +208,11 @@ export async function loadLaunches(limit = 60) {
 }
 
 export async function loadRaffles(l) {
-  const count = Number(await read(l.vault, ABI.vault, "raffleCount"));
+  const raffles = await read(l.vault, ABI.vault, "raffles");
+  const count = Number(await read(raffles, ABI.raffles, "raffleCount", [l.vault]));
   return Promise.all([...Array(count).keys()].map(async (id) => {
-    const [tokenId, root, totalTickets, publishedAt, drawBlock, winningTicket, drawn, claimed] =
-      await read(l.vault, ABI.vault, "raffles", [BigInt(id)]);
-    return { id, tokenId, root, totalTickets, publishedAt: Number(publishedAt), drawBlock, winningTicket, drawn, claimed };
+    const r = await read(raffles, ABI.raffles, "raffles", [l.vault, BigInt(id)]);
+    return { ...r, id, raffles, publishedAt: Number(r.publishedAt) };
   }));
 }
 

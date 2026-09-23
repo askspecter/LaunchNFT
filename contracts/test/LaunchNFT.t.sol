@@ -7,6 +7,8 @@ import {Registry} from "../src/Registry.sol";
 import {Launcher} from "../src/Launcher.sol";
 import {FeeRouter} from "../src/FeeRouter.sol";
 import {SweepVault} from "../src/SweepVault.sol";
+import {Raffles} from "../src/Raffles.sol";
+import {IPonsFeeEscrow} from "../src/interfaces/IPons.sol";
 import {IPonsFactory} from "../src/interfaces/IPons.sol";
 import {MockNFT, MockMarket, MockEscrow, MockPons, MockArbSys} from "./Mocks.sol";
 
@@ -21,6 +23,7 @@ contract LaunchNFTTest is Test {
     Registry registry;
     MockPons pons;
     Launcher launcher;
+    Raffles raffles;
     MockNFT nft;
     MockMarket market;
 
@@ -28,7 +31,10 @@ contract LaunchNFTTest is Test {
         vm.etch(address(0x64), address(new MockArbSys()).code);
         registry = new Registry(owner, keeper, treasury);
         pons = new MockPons();
-        launcher = new Launcher(IPonsFactory(address(pons)), registry);
+        raffles = new Raffles(registry);
+        SweepVault vaultImpl = new SweepVault(registry, address(raffles));
+        FeeRouter routerImpl = new FeeRouter(registry, IPonsFeeEscrow(pons.feeEscrow()));
+        launcher = new Launcher(IPonsFactory(address(pons)), registry, address(vaultImpl), address(routerImpl));
         nft = new MockNFT();
         market = new MockMarket(nft);
         vm.startPrank(owner);
@@ -81,6 +87,8 @@ contract LaunchNFTTest is Test {
         assertEq(pons.lastRecipient(), address(router));
         assertEq(pons.lastTax(), 100);
         assertEq(router.vault(), address(vault));
+        assertEq(router.curve(), address(pons));
+        assertEq(vault.raffles(), address(raffles));
         assertEq(address(vault.collection()), address(nft));
         (,,,,, address c) = launcher.launches(0);
         assertEq(c, creator);
@@ -170,36 +178,37 @@ contract LaunchNFTTest is Test {
         bytes32 leafB = keccak256(bytes.concat(keccak256(abi.encode(bob, uint256(60), uint256(100)))));
         bytes32 root = leafA < leafB ? keccak256(abi.encode(leafA, leafB)) : keccak256(abi.encode(leafB, leafA));
         vm.prank(keeper);
-        uint256 id = vault.openRaffle(9, root, 100);
+        uint256 id = raffles.openRaffle(vault, 9, root, 100);
 
-        vm.expectRevert("too early");
-        vault.commitDraw(id);
-        vm.expectRevert("not committed");
-        vault.draw(id);
+        vm.expectRevert(Raffles.TooEarly.selector);
+        raffles.commitDraw(address(vault), id);
+        vm.expectRevert(Raffles.NotCommitted.selector);
+        raffles.draw(address(vault), id);
 
         skip(15 minutes);
-        vault.commitDraw(id);
-        (,,,, uint64 drawBlock,,,) = vault.raffles(id);
-        vm.expectRevert("too early");
-        vault.draw(id);
+        raffles.commitDraw(address(vault), id);
+        uint64 drawBlock = raffles.raffles(address(vault), id).drawBlock;
+        vm.expectRevert(Raffles.TooEarly.selector);
+        raffles.draw(address(vault), id);
         vm.roll(drawBlock + 1);
-        vault.draw(id);
-        (,,,,, uint256 winning, bool drawn,) = vault.raffles(id);
-        assertTrue(drawn);
+        raffles.draw(address(vault), id);
+        Raffles.Raffle memory r = raffles.raffles(address(vault), id);
+        uint256 winning = r.winningTicket;
+        assertTrue(r.drawn);
 
         bytes32[] memory proof = new bytes32[](1);
         if (winning < 60) {
             proof[0] = leafB;
-            vault.claim(id, alice, 0, 60, proof);
+            raffles.claim(address(vault), id, alice, 0, 60, proof);
             assertEq(nft.ownerOf(9), alice);
         } else {
             proof[0] = leafA;
-            vault.claim(id, bob, 60, 100, proof);
+            raffles.claim(address(vault), id, bob, 60, 100, proof);
             assertEq(nft.ownerOf(9), bob);
         }
 
-        vm.expectRevert("not claimable");
-        vault.claim(id, alice, 0, 60, proof);
+        vm.expectRevert(Raffles.NotClaimable.selector);
+        raffles.claim(address(vault), id, alice, 0, 60, proof);
     }
 
     function test_raffleExpiredDrawCanBeRecommitted() public {
@@ -208,24 +217,60 @@ contract LaunchNFTTest is Test {
         _list(2, 0.5 ether);
         _buy(vault, 2, 0.5 ether);
         vm.prank(keeper);
-        uint256 id = vault.openRaffle(2, keccak256("root"), 10);
+        uint256 id = raffles.openRaffle(vault, 2, keccak256("root"), 10);
 
         skip(15 minutes);
-        vault.commitDraw(id);
-        (,,,, uint64 drawBlock,,,) = vault.raffles(id);
+        raffles.commitDraw(address(vault), id);
+        uint64 drawBlock = raffles.raffles(address(vault), id).drawBlock;
         vm.roll(drawBlock + 300); // hash no longer readable
 
-        vault.draw(id);
-        (,,,, uint64 cleared,, bool drawn,) = vault.raffles(id);
-        assertFalse(drawn);
-        assertEq(cleared, 0);
+        raffles.draw(address(vault), id);
+        assertFalse(raffles.raffles(address(vault), id).drawn);
+        assertEq(raffles.raffles(address(vault), id).drawBlock, 0);
 
-        vault.commitDraw(id); // anyone can re-commit
-        (,,,, uint64 again,,,) = vault.raffles(id);
+        raffles.commitDraw(address(vault), id); // anyone can re-commit
+        uint64 again = raffles.raffles(address(vault), id).drawBlock;
         vm.roll(again + 1);
-        vault.draw(id);
-        (,,,,,, drawn,) = vault.raffles(id);
-        assertTrue(drawn);
+        raffles.draw(address(vault), id);
+        assertTrue(raffles.raffles(address(vault), id).drawn);
+    }
+
+    function test_clonesCannotBeReinitialized() public {
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Hold);
+        vm.expectRevert("initialized");
+        vault.initialize(IERC721(address(1)), SweepVault.Policy.Burn);
+        vm.expectRevert("initialized");
+        router.initialize(alice);
+        vm.expectRevert("curve set");
+        router.setCurve(alice);
+
+        SweepVault impl = SweepVault(payable(launcher.vaultImplementation()));
+        FeeRouter routerImpl = FeeRouter(payable(launcher.routerImplementation()));
+        vm.expectRevert("initialized");
+        impl.initialize(nft, SweepVault.Policy.Hold);
+        vm.expectRevert("initialized");
+        routerImpl.initialize(alice);
+    }
+
+    function test_onlyRafflesCanSendPrize() public {
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
+        _fund(router, 1 ether);
+        _list(5, 0.5 ether);
+        _buy(vault, 5, 0.5 ether);
+        vm.expectRevert("not raffles");
+        vault.sendPrize(5, alice);
+    }
+
+    function test_rafflesRejectNonRaffleVaultsAndNonKeeper() public {
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Hold);
+        _fund(router, 1 ether);
+        _list(6, 0.5 ether);
+        _buy(vault, 6, 0.5 ether);
+        vm.prank(keeper);
+        vm.expectRevert(Raffles.NotRaffleVault.selector);
+        raffles.openRaffle(vault, 6, keccak256("r"), 1);
+        vm.expectRevert(Raffles.NotKeeper.selector);
+        raffles.openRaffle(vault, 6, keccak256("r"), 1);
     }
 
     function testFuzz_harvestSplitIsExact(uint96 fees) public {

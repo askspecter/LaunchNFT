@@ -24,7 +24,7 @@
 
     <section class="card" id="deployCard">
       <h3>1. Deploy contracts</h3>
-      <p class="muted">Your connected wallet becomes the <b>owner</b>. It deploys the Registry, allow-lists Seaport 1.6, and then deploys the Launcher on top of Pons V2. That is 3 transactions, costing about 0.0005 ETH in total.</p>
+      <p class="muted">Your connected wallet becomes the <b>owner</b>. It deploys the Registry, allow-lists Seaport 1.6, then the raffle contract, two templates and the Launcher on top of Pons V2. That is up to 6 small transactions (about 0.0006 ETH in total). If it stops, tap Deploy again and it continues where it left off.</p>
       <label>Keeper address (separate wallet the bot uses)<input id="keeper" placeholder="0x…" /></label>
       <label>Treasury address (receives 20% of fees)<input id="treasury" placeholder="0x…" /></label>
       <button class="btn btn-dark btn-lg full" id="deploy">Deploy</button>

@@ -7,7 +7,7 @@ forge build >/dev/null 2>&1
 python3 - <<'PY'
 import json
 out = {}
-for name in ["Registry", "Launcher"]:
+for name in ["Registry", "Raffles", "SweepVault", "FeeRouter", "Launcher"]:
     a = json.load(open(f"out/{name}.sol/{name}.json"))
     out[name] = {"abi": a["abi"], "bytecode": a["bytecode"]["object"]}
 json.dump(out, open("../artifacts/deploy.json", "w"))

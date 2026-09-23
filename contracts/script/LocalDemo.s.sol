@@ -5,6 +5,9 @@ import {Script, console} from "forge-std/Script.sol";
 import {Registry} from "../src/Registry.sol";
 import {Launcher} from "../src/Launcher.sol";
 import {SweepVault} from "../src/SweepVault.sol";
+import {FeeRouter} from "../src/FeeRouter.sol";
+import {Raffles} from "../src/Raffles.sol";
+import {IPonsFeeEscrow} from "../src/interfaces/IPons.sol";
 import {IPonsFactory} from "../src/interfaces/IPons.sol";
 import {MockNFT, MockMarket, MockPons} from "../test/Mocks.sol";
 
@@ -36,7 +39,11 @@ contract LocalDemo is Script {
     function _deploy(address owner, address keeper) internal {
         registry = new Registry(owner, keeper, owner);
         pons = new MockPons();
-        launcher = new Launcher(IPonsFactory(address(pons)), registry);
+        Raffles raffles = new Raffles(registry);
+        SweepVault vaultImpl = new SweepVault(registry, address(raffles));
+        FeeRouter routerImpl = new FeeRouter(registry, IPonsFeeEscrow(pons.feeEscrow()));
+        launcher = new Launcher(IPonsFactory(address(pons)), registry, address(vaultImpl), address(routerImpl));
+        console.log("RAFFLES", address(raffles));
         nft = new MockNFT();
         market = new MockMarket(nft);
         registry.setCollection(address(nft), true);

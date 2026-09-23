@@ -2,17 +2,20 @@
 pragma solidity ^0.8.28;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IPonsFactory, IPonsFeeEscrow} from "./interfaces/IPons.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {IPonsFactory} from "./interfaces/IPons.sol";
 import {Registry} from "./Registry.sol";
 import {FeeRouter} from "./FeeRouter.sol";
 import {SweepVault} from "./SweepVault.sol";
 
 /// @notice Launches a Pons V2 coin whose creator fees are routed to a vault that
 /// can only buy NFTs from one collection. Pairing and NFT policy are fixed at launch.
+/// Vaults and routers are minimal-proxy clones, which keeps every deployment small.
 contract Launcher {
     IPonsFactory public immutable pons;
-    IPonsFeeEscrow public immutable escrow;
     Registry public immutable registry;
+    address public immutable vaultImplementation;
+    address public immutable routerImplementation;
 
     struct Launch {
         address token;
@@ -51,10 +54,14 @@ contract Launcher {
         SweepVault.Policy policy
     );
 
-    constructor(IPonsFactory pons_, Registry registry_) {
+    constructor(IPonsFactory pons_, Registry registry_, address vaultImplementation_, address routerImplementation_) {
         pons = pons_;
-        escrow = IPonsFeeEscrow(pons_.feeEscrow());
         registry = registry_;
+        vaultImplementation = vaultImplementation_;
+        routerImplementation = routerImplementation_;
+        require(SweepVault(payable(vaultImplementation_)).registry() == registry_, "vault registry");
+        require(FeeRouter(payable(routerImplementation_)).registry() == registry_, "router registry");
+        require(address(FeeRouter(payable(routerImplementation_)).escrow()) == pons_.feeEscrow(), "router escrow");
     }
 
     /// @notice msg.value must equal the Pons launch fee (read `pons.launchFee()`).
@@ -62,8 +69,10 @@ contract Launcher {
         require(registry.isCollection(address(p.collection)), "collection not listed");
         require(msg.value == pons.launchFee(), "wrong launch fee");
 
-        SweepVault vault = new SweepVault(registry, p.collection, p.policy);
-        FeeRouter router = new FeeRouter(registry, escrow, address(vault));
+        SweepVault vault = SweepVault(payable(Clones.clone(vaultImplementation)));
+        vault.initialize(p.collection, p.policy);
+        FeeRouter router = FeeRouter(payable(Clones.clone(routerImplementation)));
+        router.initialize(address(vault));
 
         (address token, address curve) = pons.launchToken{value: msg.value}(
             IPonsFactory.TokenParams({

@@ -26,6 +26,7 @@ OUT=$(cd $CONTRACTS && OWNER_KEY=$OWNER_KEY KEEPER_KEY=$KEEPER_KEY SELLER_KEY=$S
   forge script script/LocalDemo.s.sol --rpc-url $RPC --broadcast 2>&1)
 LAUNCHER=$(echo "$OUT" | awk '/LAUNCHER/{print $2}')
 MARKET=$(echo "$OUT" | awk '/MARKET/{print $2}')
+RAFFLES=$(echo "$OUT" | awk '/RAFFLES/{print $2}')
 L=($(cast call $LAUNCHER "launches(uint256)(address,address,address,address,address,address)" 0 --rpc-url $RPC))
 ROUTER=${L[2]}; VAULT=${L[3]}; NFT=${L[4]}
 echo "launcher=$LAUNCHER vault=$VAULT router=$ROUTER"
@@ -50,7 +51,7 @@ check "$(cast call $NFT 'ownerOf(uint256)(address)' 42 --rpc-url $RPC)" "$VAULT"
 # 3. Keeper snapshots holders and opens a raffle.
 keeper
 test -f $SNAPDIR/$(echo $VAULT | tr A-F a-f)-0.json && echo "ok: snapshot file written"
-check "$(cast call $VAULT 'raffleCount()(uint256)' --rpc-url $RPC)" "1" "raffle opened"
+check "$(cast call $RAFFLES 'raffleCount(address)(uint256)' $VAULT --rpc-url $RPC)" "1" "raffle opened"
 
 # 4. After the 15 min delay: commit, then draw, then deliver.
 cast rpc evm_increaseTime 901 --rpc-url $RPC >/dev/null; cast rpc evm_mine --rpc-url $RPC >/dev/null

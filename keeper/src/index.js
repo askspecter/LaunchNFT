@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { createPublicClient, createWalletClient, defineChain, http, formatEther, getAddress, parseEventLogs } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { loadConfig } from "./config.js";
-import { launcherAbi, routerAbi, vaultAbi, erc721Abi, arbSysAbi, ARB_SYS, POLICY } from "./abi.js";
+import { launcherAbi, routerAbi, vaultAbi, rafflesAbi, erc721Abi, arbSysAbi, ARB_SYS, POLICY } from "./abi.js";
 import { OpenSea, RateLimited } from "./opensea.js";
 import { serveSnapshots } from "./server.js";
 import { balancesAt, buildSnapshot, winnerOf } from "./snapshot.js";
@@ -54,8 +54,11 @@ async function readLaunches() {
     const [token, curve, router, vault, collection] = await client.readContract({
       address: cfg.launcher, abi: launcherAbi, functionName: "launches", args: [i],
     });
-    const policy = await client.readContract({ address: vault, abi: vaultAbi, functionName: "policy" });
-    out.push({ id: i, token, curve, router, vault, collection, policy: POLICY[policy] });
+    const [policy, raffles] = await Promise.all([
+      client.readContract({ address: vault, abi: vaultAbi, functionName: "policy" }),
+      client.readContract({ address: vault, abi: vaultAbi, functionName: "raffles" }),
+    ]);
+    out.push({ id: i, token, curve, router, vault, collection, raffles, policy: POLICY[policy] });
   }
   return out;
 }
@@ -115,7 +118,7 @@ async function heldTokenIds(l) {
   for (const id of ids) {
     const [owner, busy] = await Promise.all([
       client.readContract({ address: l.collection, abi: erc721Abi, functionName: "ownerOf", args: [id] }).catch(() => null),
-      client.readContract({ address: l.vault, abi: vaultAbi, functionName: "inRaffle", args: [id] }),
+      client.readContract({ address: l.raffles, abi: rafflesAbi, functionName: "inRaffle", args: [l.vault, id] }),
     ]);
     if (owner && getAddress(owner) === getAddress(l.vault) && !busy) held.push(id);
   }
@@ -133,15 +136,10 @@ async function openRaffles(l) {
     if (!snap) return warn(`#${l.id} no eligible holders for raffle`);
 
     const receipt = await send(`#${l.id} openRaffle token ${tokenId} (${snap.entries.length} holders)`, {
-      address: l.vault, abi: vaultAbi, functionName: "openRaffle", args: [tokenId, snap.root, snap.totalTickets],
+      address: l.raffles, abi: rafflesAbi, functionName: "openRaffle", args: [l.vault, tokenId, snap.root, snap.totalTickets],
     });
     if (!receipt) return;
-    const [opened] = parseEventLogs({
-      abi: [{ type: "event", name: "RaffleOpened", inputs: [
-        { name: "id", type: "uint256", indexed: true }, { name: "tokenId", type: "uint256", indexed: true },
-        { name: "root", type: "bytes32" }, { name: "totalTickets", type: "uint256" }] }],
-      logs: receipt.logs,
-    });
+    const [opened] = parseEventLogs({ abi: rafflesAbi, eventName: "RaffleOpened", logs: receipt.logs });
     const id = opened.args.id;
     await mkdir(cfg.snapshotDir, { recursive: true });
     await writeFile(snapshotPath(l.vault, id), JSON.stringify({
@@ -155,13 +153,13 @@ async function openRaffles(l) {
 
 async function progressRaffles(l) {
   const [count, delay] = await Promise.all([
-    client.readContract({ address: l.vault, abi: vaultAbi, functionName: "raffleCount" }),
-    client.readContract({ address: l.vault, abi: vaultAbi, functionName: "SNAPSHOT_DELAY" }),
+    client.readContract({ address: l.raffles, abi: rafflesAbi, functionName: "raffleCount", args: [l.vault] }),
+    client.readContract({ address: l.raffles, abi: rafflesAbi, functionName: "SNAPSHOT_DELAY" }),
   ]);
   const now = await chainNow();
   for (let id = 0n; id < count; id++) {
-    const [, , , publishedAt, drawBlock, winningTicket, drawn, claimed] = await client.readContract({
-      address: l.vault, abi: vaultAbi, functionName: "raffles", args: [id],
+    const { publishedAt, drawBlock, winningTicket, drawn, claimed } = await client.readContract({
+      address: l.raffles, abi: rafflesAbi, functionName: "raffles", args: [l.vault, id],
     });
     if (claimed) continue;
 
@@ -171,12 +169,12 @@ async function progressRaffles(l) {
       let target = drawBlock;
       if (target === 0n) {
         if (now < publishedAt + delay) continue;
-        await send(`#${l.id} raffle ${id} commitDraw`, { address: l.vault, abi: vaultAbi, functionName: "commitDraw", args: [id] });
+        await send(`#${l.id} raffle ${id} commitDraw`, { address: l.raffles, abi: rafflesAbi, functionName: "commitDraw", args: [l.vault, id] });
         if (cfg.dryRun) continue;
-        [, , , , target] = await client.readContract({ address: l.vault, abi: vaultAbi, functionName: "raffles", args: [id] });
+        ({ drawBlock: target } = await client.readContract({ address: l.raffles, abi: rafflesAbi, functionName: "raffles", args: [l.vault, id] }));
       }
       await waitForChainBlock(target + 1n);
-      await send(`#${l.id} raffle ${id} draw`, { address: l.vault, abi: vaultAbi, functionName: "draw", args: [id] });
+      await send(`#${l.id} raffle ${id} draw`, { address: l.raffles, abi: rafflesAbi, functionName: "draw", args: [l.vault, id] });
       continue; // deliver next pass (or immediately below on the following tick)
     }
     if (drawn) {
@@ -185,8 +183,8 @@ async function progressRaffles(l) {
       if (!snap) { warn(`#${l.id} raffle ${id}: snapshot file missing, winner must claim manually`); continue; }
       const w = winnerOf(snap, winningTicket);
       await send(`#${l.id} raffle ${id} deliver to ${w.account}`, {
-        address: l.vault, abi: vaultAbi, functionName: "claim",
-        args: [id, w.account, BigInt(w.start), BigInt(w.end), w.proof],
+        address: l.raffles, abi: rafflesAbi, functionName: "claim",
+        args: [l.vault, id, w.account, BigInt(w.start), BigInt(w.end), w.proof],
       });
     }
   }

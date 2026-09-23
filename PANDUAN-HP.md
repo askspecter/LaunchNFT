@@ -23,7 +23,7 @@ Di MetaMask, buat akun tambahan lewat ketuk nama akun → **Add account**.
 2. Pilih akun **Owner** dan pastikan jaringannya **Robinhood Chain**.
 3. Ketuk **Connect wallet**.
 4. Isi **Keeper address** dengan alamat akun Keeper, dan **Treasury address** dengan alamat akun Treasury.
-5. Ketuk **Deploy**, lalu setujui **3 transaksi** satu per satu di wallet.
+5. Ketuk **Deploy**, lalu setujui transaksinya satu per satu di wallet (maksimal 6 transaksi kecil).
 6. Setelah muncul **Deployed ✓**, ketuk **Copy**. Hasilnya berisi `launcher` dan `startBlock`.
 
 Kalau browser tertutup di tengah jalan, buka lagi halaman Admin dan ketuk Deploy. Proses akan lanjut dari langkah terakhir.

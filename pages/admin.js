@@ -21,7 +21,13 @@ const PROGRESS_KEY = "launchnft-deploy";
 
 let registry = null;
 
-const saved = () => { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}"); } catch { return {}; } };
+const saved = () => {
+  try {
+    const p = JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}");
+    if (p.seaport === true) p.seaport = "yes"; // progress saved by the first version of this page
+    return p;
+  } catch { return {}; }
+};
 const save = (v) => { try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ ...saved(), ...v })); } catch {} };
 
 function logStep(text, href) {
@@ -92,31 +98,42 @@ $("#deploy").addEventListener("click", async (e) => {
     await mustChain();
     if (getAddress(keeper) === owner) throw new Error("Use a separate wallet for the keeper, not the owner");
     const artifacts = await (await fetch("artifacts/deploy.json")).json();
-    const progress = saved();
+    const escrow = await client.readContract({
+      address: CONFIG.ponsFactory, abi: parseAbi(["function feeEscrow() view returns (address)"]), functionName: "feeEscrow",
+    });
 
-    // Resume if a previous attempt was interrupted (e.g. the phone browser reloaded).
-    let reg = progress.owner === owner && progress.registry ? progress.registry : null;
-    let block = progress.block;
-    if (!reg) {
+    // Every step is saved, so an interrupted deploy resumes where it stopped.
+    // Each transaction stays under ~1.1M gas so mobile wallets can send it.
+    let p = saved();
+    if (p.owner !== owner) { p = { owner }; save(p); }
+    const step = async (key, label, fn) => {
+      if (p[key]) return logStep(`${label}: done (${p[key]})`), p[key];
+      const value = await fn();
+      p[key] = value;
+      save({ [key]: value });
+      logStep(`${label}: ${value}`);
+      return value;
+    };
+
+    const reg = await step("registry", "Registry", async () => {
       const r = await deploy("Registry", artifacts.Registry, [owner, getAddress(keeper), getAddress(treasury)]);
-      reg = r.contractAddress;
-      block = Number(r.blockNumber);
-      save({ owner, registry: reg, block });
-    }
-    logStep(`Registry at ${reg}`);
-
-    if (!progress.seaport || progress.registry !== reg) {
+      save({ block: Number(r.blockNumber) });
+      p.block = Number(r.blockNumber);
+      return r.contractAddress;
+    });
+    await step("seaport", "Allow Seaport 1.6", async () => {
       await send("Allow Seaport 1.6", { address: reg, abi: REGISTRY_ADMIN, functionName: "setMarketplace", args: [CONFIG.seaport, true] });
-      save({ seaport: true });
-    }
-
-    let launcher = progress.registry === reg ? progress.launcher : null;
-    if (!launcher) {
-      const r = await deploy("Launcher", artifacts.Launcher, [CONFIG.ponsFactory, reg]);
-      launcher = r.contractAddress;
-      save({ launcher });
-    }
-    logStep(`Launcher at ${launcher}`);
+      return "yes";
+    });
+    const raffles = await step("raffles", "Raffles", async () =>
+      (await deploy("Raffles", artifacts.Raffles, [reg])).contractAddress);
+    const vaultImpl = await step("vaultImpl", "Vault template", async () =>
+      (await deploy("Vault template", artifacts.SweepVault, [reg, raffles])).contractAddress);
+    const routerImpl = await step("routerImpl", "Fee router template", async () =>
+      (await deploy("Fee router template", artifacts.FeeRouter, [reg, escrow])).contractAddress);
+    const launcher = await step("launcher", "Launcher", async () =>
+      (await deploy("Launcher", artifacts.Launcher, [CONFIG.ponsFactory, reg, vaultImpl, routerImpl])).contractAddress);
+    const block = p.block;
     registry = reg;
     showResult({ registry: reg, launcher, block });
     await refreshRegistry();
@@ -179,7 +196,7 @@ onAccount(async (a) => {
   $("#walletInfo").innerHTML = `${addrLink(a, a)} · ${eth(bal, 5)} ETH on ${CONFIG.chainName}`;
 });
 
-const p = saved();
-if (p.registry && p.launcher) showResult({ registry: p.registry, launcher: p.launcher, block: p.block });
+const initial = saved();
+if (initial.registry && initial.launcher) showResult({ registry: initial.registry, launcher: initial.launcher, block: initial.block });
 if (isAddress(CONFIG.launcher)) $("#deployCard").querySelector("#deploy").textContent = "Deploy again (already configured)";
 refreshRegistry().catch(() => {});

@@ -54,8 +54,8 @@ function renderMine(account) {
     btn.disabled = true;
     try {
       await write({
-        address: d.launch.vault, abi: ABI.vault, functionName: "claim",
-        args: [BigInt(d.id), d.winner.account, BigInt(d.winner.start), BigInt(d.winner.end), d.winner.proof],
+        address: d.raffles, abi: ABI.raffles, functionName: "claim",
+        args: [d.launch.vault, BigInt(d.id), d.winner.account, BigInt(d.winner.start), BigInt(d.winner.end), d.winner.proof],
       });
       toast("NFT claimed");
       d.claimed = true;

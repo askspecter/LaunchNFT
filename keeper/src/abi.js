@@ -17,15 +17,21 @@ export const vaultAbi = parseAbi([
   "function ceilingExpiry() view returns (uint256)",
   "function postCeiling(uint256 ceiling)",
   "function buy(address marketplace, bytes data, uint256 tokenId, uint256 price)",
-  "function inRaffle(uint256) view returns (bool)",
-  "function raffleCount() view returns (uint256)",
-  "function raffles(uint256) view returns (uint256 tokenId, bytes32 root, uint256 totalTickets, uint64 publishedAt, uint64 drawBlock, uint256 winningTicket, bool drawn, bool claimed)",
-  "function openRaffle(uint256 tokenId, bytes32 root, uint256 totalTickets) returns (uint256)",
-  "function commitDraw(uint256 id)",
-  "function draw(uint256 id)",
-  "function claim(uint256 id, address account, uint256 start, uint256 end, bytes32[] proof)",
-  "function SNAPSHOT_DELAY() view returns (uint256)",
+  "function raffles() view returns (address)",
   "event Bought(address indexed marketplace, uint256 indexed tokenId, uint256 price)",
+]);
+
+export const rafflesAbi = parseAbi([
+  "struct Raffle { uint256 tokenId; bytes32 root; uint256 totalTickets; uint64 publishedAt; uint64 drawBlock; uint256 winningTicket; bool drawn; bool claimed; }",
+  "function inRaffle(address vault, uint256 tokenId) view returns (bool)",
+  "function raffleCount(address vault) view returns (uint256)",
+  "function raffles(address vault, uint256 id) view returns (Raffle)",
+  "function openRaffle(address vault, uint256 tokenId, bytes32 root, uint256 totalTickets) returns (uint256)",
+  "function commitDraw(address vault, uint256 id)",
+  "function draw(address vault, uint256 id)",
+  "function claim(address vault, uint256 id, address account, uint256 start, uint256 end, bytes32[] proof)",
+  "function SNAPSHOT_DELAY() view returns (uint256)",
+  "event RaffleOpened(address indexed vault, uint256 indexed id, uint256 indexed tokenId, bytes32 root, uint256 totalTickets)",
 ]);
 
 export const erc20Abi = parseAbi([
