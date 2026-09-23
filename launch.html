@@ -29,8 +29,19 @@
       <h3>Your coin</h3>
       <label>Name<input id="name" maxlength="32" placeholder="Floor Muncher" /></label>
       <label>Ticker<input id="symbol" maxlength="10" placeholder="MUNCH" /></label>
-      <label>Image URL<input id="logo" type="url" placeholder="https://…/image.png" /></label>
-      <p class="hint">Paste a link to a square PNG, JPG or GIF (for example from X, IPFS or Imgur). It is stored with the coin on Pons.</p>
+      <div class="field">
+        <span class="field-label">Image</span>
+        <label class="upload" id="uploadBox">
+          <input id="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+          <span class="upload-thumb" id="uploadThumb">+</span>
+          <span class="upload-text"><b id="uploadTitle">Choose an image</b><small id="uploadHint">PNG, JPG, WEBP or GIF · square works best</small></span>
+        </label>
+      </div>
+      <details class="more-links">
+        <summary>Or paste an image link</summary>
+        <label>Image URL<input id="logo" type="url" placeholder="https://…/image.png" /></label>
+      </details>
+      <p class="hint">The image is saved with the coin on Pons, so it shows up there too.</p>
       <label>Description<textarea id="description" maxlength="280" rows="3" placeholder="What is this coin about?"></textarea></label>
       <details class="more-links">
         <summary>Links (optional)</summary>

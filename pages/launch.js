@@ -57,7 +57,11 @@ async function loadCollections() {
       return { ...c, chain: chainName(c.chainId), coins: coins.length, vaultEth: coins.reduce((s, x) => s + x.vaultBalance, 0n) };
     });
   state.collections.sort((a, b) => b.coins - a.coins || a.name.localeCompare(b.name));
+  // Coming from the Collections page ("Launch a coin" on a row): preselect that collection.
+  const wanted = new URLSearchParams(location.search).get("collection");
+  if (wanted) state.collection = state.collections.find((c) => c.key.toLowerCase() === wanted.toLowerCase()) || null;
   renderCollections();
+  renderPreview();
 }
 
 // ------------------------------------------------------------------ fee math (per 1 ETH traded)
@@ -138,7 +142,7 @@ function renderSummary() {
       ? `This collection is on ${esc(state.collection.chain)}. The keeper moves the vault's ETH there to buy: every withdrawal is announced 1 hour ahead and can be cancelled, and each purchase is recorded on Robinhood Chain.`
       : "The collection and the NFT rule are permanent. The vault has no withdraw function.",
     state.collection && state.collection.chainId !== ROBINHOOD && !CONFIG.chains[state.collection.chainId]?.evm
-      ? "Raffle winners on Solana enter their Solana address on the Claims page to receive the NFT." : "",
+      ? "Raffle winners on Solana enter their Solana address on the Giveaways page to receive the NFT." : "",
     state.pons ? `Once ${eth(state.pons.graduation, 2)} ETH is in the curve, the coin moves to a locked Uniswap v4 pool, and fees keep flowing the same way.` : "",
     s ? `With ${(Number(taxBps()) / 100).toFixed(2)}% tax, every 1 ETH of trading sends about ${eth(s.vault, 4)} ETH to the vault.` : "",
   ].filter(Boolean).map((t) => `<li>${t}</li>`).join("");
@@ -162,6 +166,7 @@ function render() {
 
 function validate(step) {
   if (step === 0) {
+    if (state.uploading) return "Wait for the image to finish uploading";
     if (!val("name")) return "Enter a name";
     if (!/^[A-Za-z0-9]{1,10}$/.test(val("symbol"))) return "Ticker: 1–10 letters or numbers";
     for (const id of ["logo", "website", "twitter", "telegram", "discord"]) {
@@ -194,6 +199,60 @@ $("#stepper").addEventListener("click", (e) => {
 });
 
 ["name", "symbol", "logo"].forEach((id) => $(`#${id}`).addEventListener("input", renderPreview));
+
+// ------------------------------------------------------------------ image upload
+
+/** Shrinks big pictures to 512px so uploads stay small. GIFs are sent as-is to keep animation. */
+async function prepareImage(file) {
+  if (file.type === "image/gif" && file.size <= 500 * 1024) return file;
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 512 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise((ok) => canvas.toBlob(ok, "image/webp", 0.9));
+  return blob?.type === "image/webp" ? blob : new Promise((ok) => canvas.toBlob(ok, "image/png"));
+}
+
+const toBase64 = (blob) => new Promise((ok, fail) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).split(",")[1]);
+  r.onerror = fail;
+  r.readAsDataURL(blob);
+});
+
+$("#logoFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const title = $("#uploadTitle");
+  const thumb = $("#uploadThumb");
+  state.uploading = true;
+  title.textContent = "Uploading…";
+  $("#uploadBox").classList.add("busy");
+  try {
+    const img = await prepareImage(file);
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: await toBase64(img) }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || `Upload failed (${res.status})`);
+    const url = new URL(out.path, location.origin).href; // absolute, since Pons stores it with the coin
+    $("#logo").value = url;
+    thumb.innerHTML = `<img src="${esc(url)}" alt="" />`;
+    title.textContent = "Image ready · tap to change";
+    renderPreview();
+  } catch (err) {
+    title.textContent = "Choose an image";
+    toast(err.message);
+  } finally {
+    state.uploading = false;
+    $("#uploadBox").classList.remove("busy");
+    e.target.value = "";
+  }
+});
 $("#tax").addEventListener("input", () => {
   $("#taxLabel").textContent = `${(Number(taxBps()) / 100).toFixed(2)}%`;
   renderPreview();

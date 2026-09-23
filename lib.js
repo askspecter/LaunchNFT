@@ -59,15 +59,24 @@ export const ABI = {
     "function keeper() view returns (address)",
     "function treasury() view returns (address)",
   ]),
-  router: parseAbi(["function pending() view returns (uint256)", "function harvest()"]),
+  router: parseAbi([
+    "function pending() view returns (uint256)",
+    "function harvest()",
+    "event Harvested(uint256 toVault, uint256 toTreasury)",
+  ]),
   vault: parseAbi([
     "function policy() view returns (uint8)",
     "function ceiling() view returns (uint256)",
     "function ceilingExpiry() view returns (uint256)",
     "function raffles() view returns (address)",
     "event Bought(address indexed marketplace, uint256 indexed tokenId, uint256 price)",
+    "event Burned(uint256 indexed tokenId)",
+    "event PrizeSent(uint256 indexed tokenId, address indexed to)",
   ]),
   raffles: parseAbi([
+    "event RaffleOpened(address indexed vault, uint256 indexed id, uint256 indexed tokenId, bytes32 root, uint256 totalTickets)",
+    "event RaffleDrawn(address indexed vault, uint256 indexed id, uint256 winningTicket)",
+    "event RaffleClaimed(address indexed vault, uint256 indexed id, address indexed winner, uint256 tokenId)",
     "struct Raffle { uint256 tokenId; bytes32 root; uint256 totalTickets; uint64 publishedAt; uint64 drawBlock; uint256 winningTicket; bool drawn; bool claimed; }",
     "function raffleCount(address vault) view returns (uint256)",
     "function raffles(address vault, uint256 id) view returns (Raffle)",
@@ -98,8 +107,16 @@ export const ABI = {
     "event ExternalPurchase(uint256 indexed tokenId, uint256 price, bytes32 externalTx)",
     "event PrizeOwed(uint256 indexed tokenId, address indexed to)",
     "event PrizeDelivered(uint256 indexed tokenId, address indexed to, bytes32 destination, bytes32 externalTx)",
+    "event Withdrawn(address indexed keeper, uint256 amount)",
+    "event Burned(uint256 indexed tokenId)",
   ]),
-  erc20: parseAbi(["function name() view returns (string)", "function symbol() view returns (string)"]),
+  erc20: parseAbi([
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function totalSupply() view returns (uint256)",
+    "function logo() view returns (string)",
+    "function description() view returns (string)",
+  ]),
   erc721: parseAbi([
     "function name() view returns (string)",
     "function balanceOf(address) view returns (uint256)",
@@ -182,10 +199,12 @@ export async function write(req) {
 // ------------------------------------------------------------------ layout
 
 const NAV = [
-  ["index.html", "Home"],
-  ["explore.html", "Explore"],
+  ["explore.html", "Coins"],
   ["collections.html", "Collections"],
-  ["claims.html", "Claims"],
+  ["gallery.html", "Gallery"],
+  ["activity.html", "Activity"],
+  ["claims.html", "Giveaways"],
+  ["analytics.html", "Analytics"],
   ["docs.html", "Docs"],
 ];
 
@@ -196,6 +215,9 @@ export function renderChrome(active) {
     header.innerHTML = `
       <a href="index.html" class="brand">launch<span>nft</span><i>.</i></a>
       <nav class="nav-links" id="navLinks">
+        <form class="nav-search" action="collections.html" role="search">
+          <input name="q" type="search" placeholder="Search collections" aria-label="Search collections" value="${esc(active === "collections.html" ? new URLSearchParams(location.search).get("q") || "" : "")}" />
+        </form>
         ${NAV.map(([href, label]) => `<a href="${href}"${href === active ? ' class="active"' : ""}>${label}</a>`).join("")}
       </nav>
       <div class="nav-actions">
@@ -214,7 +236,7 @@ export function renderChrome(active) {
         <a href="index.html" class="brand">launch<span>nft</span><i>.</i></a>
         <p>Pons coins on Robinhood Chain whose creator fees buy NFT floors. Vault rules are enforced on-chain.</p>
       </div>
-      <div class="foot-links">${NAV.slice(1).map(([h, l]) => `<a href="${h}">${l}</a>`).join("")}</div>
+      <div class="foot-links">${NAV.map(([h, l]) => `<a href="${h}">${l}</a>`).join("")}</div>
       <small>© ${new Date().getFullYear()} LaunchNFT. Not affiliated with Robinhood Markets or Pons. Not financial advice.</small>`;
   }
   if (!live) {
@@ -300,9 +322,11 @@ export async function loadLaunch(id) {
   if (String(id).startsWith("e")) return loadExternalLaunch(Number(String(id).slice(1)));
   const meta = await metaByKey();
   const [token, curve, router, vault, collection, creator] = await read(CONFIG.launcher, ABI.launcher, "launches", [BigInt(id)]);
-  const [name, symbol, collectionName, vaultBalance, nfts, pending, policy] = await Promise.all([
+  const [name, symbol, logo, description, collectionName, vaultBalance, nfts, pending, policy] = await Promise.all([
     read(token, ABI.erc20, "name"),
     read(token, ABI.erc20, "symbol"),
+    read(token, ABI.erc20, "logo").catch(() => ""),
+    read(token, ABI.erc20, "description").catch(() => ""),
     nameFor(meta, collection),
     client.getBalance({ address: vault }),
     read(collection, ABI.erc721, "balanceOf", [vault]).catch(() => 0n),
@@ -311,7 +335,7 @@ export async function loadLaunch(id) {
   ]);
   return {
     id: Number(id), chainId: ROBINHOOD, external: false, token, curve, router, vault, collection, creator,
-    name, symbol, collectionName, collectionImage: imageFor(meta, collection), vaultBalance, nfts: Number(nfts), pending, policy: POLICIES[policy],
+    name, symbol, logo, description, collectionName, collectionImage: imageFor(meta, collection), vaultBalance, nfts: Number(nfts), pending, policy: POLICIES[policy],
   };
 }
 
@@ -319,9 +343,11 @@ export async function loadExternalLaunch(n) {
   const meta = await metaByKey();
   const [token, curve, router, vault, collection, creator] = await read(CONFIG.externalLauncher, ABI.extLauncher, "launches", [BigInt(n)]);
   const v = (fn) => read(vault, ABI.extVault, fn);
-  const [name, symbol, vaultBalance, pending, policy, chainId, isEvm, withdrawn, spent, pendingAmount, pendingReadyAt, buys] = await Promise.all([
+  const [name, symbol, logo, description, vaultBalance, pending, policy, chainId, isEvm, withdrawn, spent, pendingAmount, pendingReadyAt, buys] = await Promise.all([
     read(token, ABI.erc20, "name"),
     read(token, ABI.erc20, "symbol"),
+    read(token, ABI.erc20, "logo").catch(() => ""),
+    read(token, ABI.erc20, "description").catch(() => ""),
     client.getBalance({ address: vault }),
     read(router, ABI.router, "pending").catch(() => 0n),
     v("policy"), v("externalChainId"), v("externalIsEvm"), v("totalWithdrawn"), v("totalSpent"),
@@ -331,7 +357,7 @@ export async function loadExternalLaunch(n) {
   const m = meta.get(getAddress(collection));
   return {
     id: `e${n}`, chainId: Number(chainId), external: true, isEvm, token, curve, router, vault, collection, creator,
-    name, symbol, collectionName: m?.name || `${chainName(chainId)} collection`, collectionAddress: m?.address, collectionImage: m?.image || null,
+    name, symbol, logo, description, collectionName: m?.name || `${chainName(chainId)} collection`, collectionAddress: m?.address, collectionImage: m?.image || null,
     vaultBalance, pending, policy: POLICIES[policy], nfts: buys.length,
     withdrawn, spent, pendingAmount, pendingReadyAt: Number(pendingReadyAt),
     purchases: buys.map((b) => ({ tokenId: b.args.tokenId, price: b.args.price, externalTx: b.args.externalTx })),
@@ -405,11 +431,19 @@ export async function listedCollectionsDetailed() {
 export const COLORS = ["#ff5a3c", "#3b82f6", "#10b981", "#a855f7", "#f59e0b", "#ec4899", "#14b8a6", "#6366f1"];
 export const colorFor = (s) => COLORS[[...String(s)].reduce((h, c) => h + c.charCodeAt(0), 0) % COLORS.length];
 
+/** Coin picture: the logo stored on the token, or a gradient tile with the ticker. Only http(s)
+ *  logos are rendered, since the logo string is whatever the creator typed. */
+export function coinArt(c, cls) {
+  const tile = `<div class="${cls}" style="background:linear-gradient(135deg, ${colorFor(c.symbol)}, #1b1d21)">$${esc(c.symbol)}</div>`;
+  if (!c.logo || !/^https?:\/\//i.test(c.logo)) return tile;
+  return `<div class="${cls} has-img"><img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.parentNode.outerHTML=this.dataset.fallback" data-fallback="${esc(tile)}" /></div>`;
+}
+
 export function coinCard(c) {
   const href = c.id != null ? `coin.html?id=${c.id}` : null;
   const tag = href ? `a href="${href}"` : "article";
   return `<${tag} class="coin">
-    <div class="art" style="background:linear-gradient(135deg, ${colorFor(c.symbol)}, #1b1d21)">$${esc(c.symbol)}</div>
+    ${coinArt(c, "art")}
     <div class="body">
       <h4>${esc(c.name)} <small>${esc(c.policy || "")}</small></h4>
       ${chainBadge(c.chainId || ROBINHOOD)}
