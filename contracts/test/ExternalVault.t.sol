@@ -18,7 +18,9 @@ contract ExternalVaultTest is Test {
     address creator = makeAddr("creator");
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
-    address constant MILADY = 0x5Af0D9827E0c53E4799BB226655A1de152A425a5; // an L1 address, no code here
+    bytes32 constant MILADY = bytes32(uint256(uint160(0x5Af0D9827E0c53E4799BB226655A1de152A425a5))); // Ethereum
+    bytes32 constant SOL_COLLECTION = keccak256("some solana collection address");
+    uint64 constant SOLANA = 792703809;
 
     Registry registry;
     Raffles raffles;
@@ -33,8 +35,10 @@ contract ExternalVaultTest is Test {
         ExternalVault vaultImpl = new ExternalVault(registry, address(raffles));
         FeeRouter routerImpl = new FeeRouter(registry, IPonsFeeEscrow(pons.feeEscrow()));
         launcher = new ExternalLauncher(IPonsFactory(address(pons)), registry, address(vaultImpl), address(routerImpl));
-        vm.prank(owner);
-        registry.setCollection(MILADY, true);
+        vm.startPrank(owner);
+        registry.setCollection(launcher.collectionKey(1, MILADY), true);
+        registry.setCollection(launcher.collectionKey(SOLANA, SOL_COLLECTION), true);
+        vm.stopPrank();
         vm.deal(creator, 1 ether);
     }
 
@@ -44,6 +48,7 @@ contract ExternalVaultTest is Test {
         p.symbol = "MILM";
         p.chainId = 1;
         p.collection = MILADY;
+        p.isEvm = true;
         p.policy = policy;
         uint256 fee = pons.launchFee();
         vm.prank(creator);
@@ -64,6 +69,7 @@ contract ExternalVaultTest is Test {
         (FeeRouter router, ExternalVault vault) = _launch(SweepVault.Policy.Raffle);
         assertEq(vault.externalChainId(), 1);
         assertEq(vault.externalCollection(), MILADY);
+        assertTrue(vault.externalIsEvm());
         assertEq(router.vault(), address(vault));
         _fund(router, 1 ether);
         assertEq(address(vault).balance, 0.8 ether);
@@ -78,7 +84,7 @@ contract ExternalVaultTest is Test {
         launcher.launch{value: 0.0005 ether}(p);
 
         p.chainId = 1;
-        p.collection = address(0xBEEF);
+        p.collection = bytes32(uint256(0xBEEF));
         vm.prank(creator);
         vm.expectRevert("collection not listed");
         launcher.launch{value: 0.0005 ether}(p);
@@ -180,6 +186,52 @@ contract ExternalVaultTest is Test {
         assertEq(vault.prizeOwedTo(42), address(0));
     }
 
+    function test_solanaPrizeNeedsWinnerDestination() public {
+        ExternalLauncher.LaunchParams memory p;
+        p.name = "Sol Muncher";
+        p.symbol = "SOLM";
+        p.chainId = SOLANA;
+        p.collection = SOL_COLLECTION;
+        p.isEvm = false;
+        p.policy = SweepVault.Policy.Raffle;
+        uint256 fee = pons.launchFee();
+        vm.prank(creator);
+        uint256 lid = launcher.launch{value: fee}(p);
+        (,,, address v, address key,) = launcher.launches(lid);
+        ExternalVault vault = ExternalVault(payable(v));
+        assertEq(key, launcher.collectionKey(SOLANA, SOL_COLLECTION));
+        assertFalse(vault.externalIsEvm());
+
+        uint256 mint = uint256(keccak256("an nft mint"));
+        vm.prank(keeper);
+        vault.recordPurchase(mint, 1 ether, keccak256("sol tx"));
+
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(alice, uint256(0), uint256(10)))));
+        vm.prank(keeper);
+        uint256 id = raffles.openRaffle(SweepVault(payable(v)), mint, leaf, 10);
+        skip(15 minutes);
+        raffles.commitDraw(v, id);
+        vm.roll(raffles.raffles(v, id).drawBlock + 1);
+        raffles.draw(v, id);
+        raffles.claim(v, id, alice, 0, 10, new bytes32[](0));
+        assertEq(vault.prizeOwedTo(mint), alice);
+
+        vm.prank(keeper);
+        vm.expectRevert("no destination");
+        vault.markDelivered(mint, keccak256("send"));
+
+        vm.prank(bob);
+        vm.expectRevert("not winner");
+        vault.setPrizeDestination(mint, keccak256("bob sol"));
+
+        bytes32 solAddr = keccak256("alice solana wallet");
+        vm.prank(alice);
+        vault.setPrizeDestination(mint, solAddr);
+        vm.prank(keeper);
+        vault.markDelivered(mint, keccak256("send"));
+        assertEq(vault.prizeOwedTo(mint), address(0));
+    }
+
     function test_onlyRafflesCanSendPrize() public {
         (, ExternalVault vault) = _launch(SweepVault.Policy.Raffle);
         vm.prank(keeper);
@@ -191,9 +243,9 @@ contract ExternalVaultTest is Test {
     function test_clonesCannotBeReinitialized() public {
         (, ExternalVault vault) = _launch(SweepVault.Policy.Hold);
         vm.expectRevert("initialized");
-        vault.initialize(1, address(1), SweepVault.Policy.Burn);
+        vault.initialize(1, bytes32(uint256(1)), true, SweepVault.Policy.Burn);
         ExternalVault impl = ExternalVault(payable(launcher.vaultImplementation()));
         vm.expectRevert("initialized");
-        impl.initialize(1, address(1), SweepVault.Policy.Burn);
+        impl.initialize(1, bytes32(uint256(1)), true, SweepVault.Policy.Burn);
     }
 }
