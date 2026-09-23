@@ -33,7 +33,7 @@ echo "launcher=$LAUNCHER vault=$VAULT router=$ROUTER"
 SNAPDIR=$(mktemp -d)
 keeper() {
   RPC_URL=$RPC CHAIN_ID=31337 KEEPER_PRIVATE_KEY=$KEEPER_KEY LAUNCHER=$LAUNCHER START_BLOCK=0 \
-    SNAPSHOT_DIR=$SNAPDIR MIN_HARVEST_ETH=0.001 node src/index.js --once
+    SNAPSHOT_DIR=$SNAPDIR MIN_HARVEST_ETH=0.001 SWEEP_DISABLED=1 node src/index.js --once
 }
 check() { if [ "$1" != "$2" ]; then echo "FAIL: $3 (got $1, want $2)"; exit 1; fi; echo "ok: $3"; }
 
@@ -60,4 +60,12 @@ keeper                                      # draw
 keeper                                      # deliver to winner
 WINNER=$(cast call $NFT 'ownerOf(uint256)(address)' 42 --rpc-url $RPC)
 if [ "$WINNER" = "$ALICE" ] || [ "$WINNER" = "$BOB" ]; then echo "ok: NFT 42 delivered to holder $WINNER"; else echo "FAIL: owner $WINNER"; exit 1; fi
+# 5. Snapshot server serves the file with CORS and nothing else.
+node -e "import('./src/server.js').then(m => m.serveSnapshots('$SNAPDIR', 8799, () => {}))" & SRV=$!
+sleep 1
+F=$(echo $VAULT | tr A-F a-f)-0.json
+check "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8799/$F)" "200" "snapshot served"
+check "$(curl -s -D - -o /dev/null http://127.0.0.1:8799/$F | grep -ci 'access-control-allow-origin: \*')" "1" "CORS header"
+check "$(curl -s -o /dev/null -w '%{http_code}' --path-as-is http://127.0.0.1:8799/../package.json)" "404" "no path traversal"
+kill $SRV
 echo "E2E PASSED"

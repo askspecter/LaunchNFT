@@ -21,7 +21,11 @@ npm run once            # single pass, good for checking config
 npm start               # loop every INTERVAL_SEC
 ```
 
-Run it under a process manager such as systemd, pm2 or a container with a restart policy. Serve `SNAPSHOT_DIR` publicly at the URL in the site's `config.js` (`snapshotBaseUrl`) so holders can verify snapshots and claim.
+Run it under a process manager such as systemd, pm2 or a container with a restart policy.
+
+**OpenSea key:** with `OPENSEA_API_KEY` empty, the keeper creates a free-tier key itself and renews it before its 7-day expiry. Free-tier limits are low (fulfillment is about 5/minute), which is enough to start. For production, use a full key from https://opensea.io/settings/developer. On a `429` the keeper pauses OpenSea calls until the time given in `Retry-After`.
+
+**Snapshots for a static site (Vercel):** set `SNAPSHOT_PORT`. The keeper then serves `SNAPSHOT_DIR` read-only with CORS at `/<vault>-<id>.json`, plus `/health`. Put it behind HTTPS (a Caddy/nginx reverse proxy, or the host's HTTPS URL) and set `snapshotBaseUrl` in the site's `config.js` to that URL.
 
 ## Test
 

@@ -4,7 +4,8 @@ import { createPublicClient, createWalletClient, defineChain, http, formatEther,
 import { privateKeyToAccount } from "viem/accounts";
 import { loadConfig } from "./config.js";
 import { launcherAbi, routerAbi, vaultAbi, erc721Abi, arbSysAbi, ARB_SYS, POLICY } from "./abi.js";
-import { OpenSea } from "./opensea.js";
+import { OpenSea, RateLimited } from "./opensea.js";
+import { serveSnapshots } from "./server.js";
 import { balancesAt, buildSnapshot, winnerOf } from "./snapshot.js";
 import { log, warn } from "./log.js";
 
@@ -18,7 +19,7 @@ const chain = defineChain({
 const client = createPublicClient({ chain, transport: http(cfg.rpcUrl) });
 const account = privateKeyToAccount(cfg.privateKey);
 const wallet = createWalletClient({ account, chain, transport: http(cfg.rpcUrl) });
-const opensea = cfg.openseaApiKey ? new OpenSea({ apiKey: cfg.openseaApiKey, chain: cfg.openseaChain }) : null;
+const opensea = cfg.sweepDisabled ? null : new OpenSea({ apiKey: cfg.openseaApiKey, chain: cfg.openseaChain, log });
 
 /** Chain time, not wall-clock time: the vault's checks use block.timestamp. */
 async function chainNow() {
@@ -184,6 +185,7 @@ async function tick() {
       try {
         await step(l);
       } catch (e) {
+        if (e instanceof RateLimited) { warn(e.message); continue; }
         warn(`#${l.id} ${name}: ${e.shortMessage || e.message}`);
       }
     }
@@ -193,7 +195,9 @@ async function tick() {
 async function main() {
   const id = await client.getChainId();
   if (id !== cfg.chainId) throw new Error(`RPC chain ${id} != CHAIN_ID ${cfg.chainId}`);
-  log(`keeper ${account.address} on chain ${id}${cfg.dryRun ? " (dry run)" : ""}${opensea ? "" : " — no OPENSEA_API_KEY, sweeping disabled"}`);
+  const mode = !opensea ? "sweeping disabled" : cfg.openseaApiKey ? "OpenSea key from env" : "OpenSea free-tier key (auto)";
+  log(`keeper ${account.address} on chain ${id} — ${mode}${cfg.dryRun ? " (dry run)" : ""}`);
+  if (cfg.snapshotPort) serveSnapshots(cfg.snapshotDir, cfg.snapshotPort, log);
   const once = process.argv.includes("--once");
   do {
     await tick().catch((e) => warn(`tick failed: ${e.shortMessage || e.message}`));

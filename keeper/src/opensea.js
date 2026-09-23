@@ -2,19 +2,52 @@ import { parseAbiItem, encodeFunctionData, getAddress } from "viem";
 
 const BASE = "https://api.opensea.io/api/v2";
 
-/** Minimal OpenSea v2 client: floor listings and Seaport fulfillment calldata. */
+export class RateLimited extends Error {
+  constructor(until) {
+    super(`OpenSea rate limited until ${new Date(until).toISOString()}`);
+    this.until = until;
+  }
+}
+
+/**
+ * Minimal OpenSea v2 client: floor listings and Seaport fulfillment calldata.
+ * Without an apiKey it mints a free-tier key (POST /auth/keys, valid 7 days) and
+ * renews it before expiry or when OpenSea rejects it.
+ */
 export class OpenSea {
-  constructor({ apiKey, chain }) {
-    this.apiKey = apiKey;
+  constructor({ apiKey, chain, log = () => {} }) {
+    this.apiKey = apiKey || null;
+    this.auto = !apiKey;
+    this.expiresAt = Infinity;
+    this.pausedUntil = 0;
     this.chain = chain;
+    this.log = log;
     this.slugs = new Map();
   }
 
+  async #ensureKey() {
+    if (!this.auto || (this.apiKey && Date.now() < this.expiresAt - 3_600_000)) return;
+    const res = await fetch(`${BASE}/auth/keys`, { method: "POST", headers: { accept: "application/json" } });
+    if (res.status === 429) throw new RateLimited(Date.now() + retryAfterMs(res, 3_600_000));
+    if (!res.ok) throw new Error(`OpenSea key mint ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const k = await res.json();
+    this.apiKey = k.api_key;
+    this.expiresAt = Date.parse(k.expires_at) || Date.now() + 6 * 86_400_000;
+    this.log(`OpenSea free-tier key minted (${k.name}), expires ${k.expires_at}`);
+  }
+
   async #get(path, init = {}) {
+    if (Date.now() < this.pausedUntil) throw new RateLimited(this.pausedUntil);
+    await this.#ensureKey();
     const res = await fetch(BASE + path, {
       ...init,
       headers: { accept: "application/json", "x-api-key": this.apiKey, ...(init.headers || {}) },
     });
+    if (res.status === 429) {
+      this.pausedUntil = Date.now() + retryAfterMs(res, 60_000);
+      throw new RateLimited(this.pausedUntil);
+    }
+    if ((res.status === 401 || res.status === 403) && this.auto) this.apiKey = null; // re-mint next call
     if (!res.ok) throw new Error(`OpenSea ${res.status} ${path}: ${(await res.text()).slice(0, 200)}`);
     return res.json();
   }
@@ -64,6 +97,14 @@ export class OpenSea {
     const args = Object.values(tx.input_data).map(toPositional);
     return { to: getAddress(tx.to), value: BigInt(tx.value), data: encodeFunctionData({ abi: [item], args }) };
   }
+}
+
+function retryAfterMs(res, fallback) {
+  const retry = Number(res.headers.get("retry-after"));
+  if (retry > 0) return retry * 1000;
+  const reset = Number(res.headers.get("x-ratelimit-reset"));
+  if (reset > 0) return Math.max(reset * 1000 - Date.now(), 1000);
+  return fallback;
 }
 
 // OpenSea returns tuples as JSON objects in struct order; the ABI item has unnamed

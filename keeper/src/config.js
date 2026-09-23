@@ -15,6 +15,8 @@ export function loadConfig() {
     launcher: req("LAUNCHER"),
     startBlock: BigInt(process.env.START_BLOCK || 0),
     openseaApiKey: process.env.OPENSEA_API_KEY || "",
+    sweepDisabled: process.env.SWEEP_DISABLED === "1",
+    snapshotPort: Number(process.env.SNAPSHOT_PORT || 0),
     openseaChain: process.env.OPENSEA_CHAIN || "robinhood",
     seaport: process.env.SEAPORT || "0x0000000000000068F116a894984e2DB1123eB395",
     ceilingMarkupBps: BigInt(process.env.CEILING_MARKUP_BPS || 300),

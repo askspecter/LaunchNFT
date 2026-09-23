@@ -70,8 +70,8 @@ cp .env.example .env
 Isi `.env`:
 - `KEEPER_PRIVATE_KEY`: private key wallet keeper. Harus sama dengan alamat `KEEPER` saat deploy.
 - `LAUNCHER`, `START_BLOCK`: dari langkah 3.
-- `OPENSEA_API_KEY`: minta di https://docs.opensea.io/reference/api-keys.
-- `SNAPSHOT_DIR`: folder yang ikut di-hosting bersama website (lihat langkah 6).
+- `OPENSEA_API_KEY`: boleh dikosongkan. Keeper akan membuat key free-tier sendiri (berlaku 7 hari dan diperpanjang otomatis). Untuk produksi, buat key penuh di https://opensea.io/settings/developer (Settings → Developer → Get access → Create key), lalu tempel di sini.
+- `SNAPSHOT_PORT=8080`: keeper menyajikan file snapshot raffle lewat HTTP (lihat langkah 6).
 
 ```sh
 DRY_RUN=1 npm run once   # simulasi saja, cek log-nya
@@ -90,10 +90,14 @@ npm i -g pm2 && pm2 start src/index.js --name launchnft-keeper && pm2 save
    ```js
    launcher: "0xALAMAT_LAUNCHER",
    startBlock: NOMOR_BLOK_DEPLOY,
-   snapshotBaseUrl: "snapshots/",   // atau URL lengkap tempat SNAPSHOT_DIR di-hosting
+   snapshotBaseUrl: "https://keeper.domainanda.com/",
    ```
-2. Upload folder root (`index.html`, `explore.html`, `coin.html`, `collections.html`, `claims.html`, `docs.html`, `*.js`, `pages/`, `styles.css`) ke hosting statis apa pun: Vercel, Netlify, Cloudflare Pages, atau GitHub Pages. Tidak perlu proses build.
-3. Pastikan file snapshot raffle dari keeper bisa diakses di `snapshotBaseUrl`. Cara termudah: jalankan keeper di server yang sama dan sajikan folder `snapshots/` bersama website, atau sinkronkan ke storage (S3/R2) lalu set `snapshotBaseUrl` ke URL-nya.
+2. **Vercel:** commit perubahan `config.js`, lalu push. Vercel otomatis redeploy. Tidak perlu build command; output directory = root repo.
+3. **Snapshot raffle:** Vercel hanya menyajikan file statis, jadi file snapshot disajikan oleh keeper sendiri (`SNAPSHOT_PORT`). Pasang HTTPS di depannya, misalnya dengan Caddy (`keeper.domainanda.com { reverse_proxy localhost:8080 }`), lalu set:
+   ```js
+   snapshotBaseUrl: "https://keeper.domainanda.com/",
+   ```
+   Cek: `https://keeper.domainanda.com/health` harus menampilkan `ok`.
 
 ## 7. Cek setelah live
 
