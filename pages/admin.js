@@ -2,7 +2,7 @@ import {
   CONFIG, ABI, client, $, esc, toast, renderChrome, connect, walletClient, getAccount, onAccount,
   isAddress, getAddress, addrLink, txLink, eth,
 } from "../lib.js";
-import { parseAbi } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
+import { parseAbi, encodeDeployData } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
 renderChrome("");
 
@@ -35,10 +35,15 @@ async function mustChain() {
   if (id !== CONFIG.chainId) throw new Error(`Switch your wallet to ${CONFIG.chainName} (chain ${CONFIG.chainId})`);
 }
 
+// Wallets on Arbitrum-based chains sometimes under-estimate gas for large deployments,
+// so estimate against the RPC ourselves and add a 30% margin.
+const withMargin = (g) => (g * 13n) / 10n;
+
 async function send(label, req) {
   const wallet = await walletClient();
   const { request } = await client.simulateContract({ account: wallet.account, ...req });
-  const hash = await wallet.writeContract(request);
+  const gas = withMargin(await client.estimateContractGas({ account: wallet.account, ...req }));
+  const hash = await wallet.writeContract({ ...request, gas });
   logStep(`${label}: sent`, txLink(hash));
   const r = await client.waitForTransactionReceipt({ hash });
   if (r.status !== "success") throw new Error(`${label} reverted`);
@@ -47,10 +52,15 @@ async function send(label, req) {
 
 async function deploy(label, artifact, args) {
   const wallet = await walletClient();
-  const hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, args });
-  logStep(`${label}: sent`, txLink(hash));
+  const data = encodeDeployData({ abi: artifact.abi, bytecode: artifact.bytecode, args });
+  // Estimating also surfaces a revert reason before anything is sent.
+  const gas = withMargin(await client.estimateGas({ account: wallet.account, data }));
+  const hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, args, gas });
+  logStep(`${label}: sent (gas limit ${gas})`, txLink(hash));
   const r = await client.waitForTransactionReceipt({ hash });
-  if (r.status !== "success" || !r.contractAddress) throw new Error(`${label} deploy failed`);
+  if (r.status !== "success" || !r.contractAddress) {
+    throw new Error(`${label} deploy failed (used ${r.gasUsed} of ${gas} gas) — tap the tx link for details`);
+  }
   return r;
 }
 
