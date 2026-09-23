@@ -2567,5 +2567,502 @@
   "name": "World Cups",
   "slug": "worldcups",
   "image": "https://i2c.seadn.io/collection/worldcups/image_type_logo/7f71b3821ac833d341255a15e108de/2d7f71b3821ac833d341255a15e108de.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0x9125e2d6827a00b0f8330d6ef7bef07730bac685",
+  "name": "Hypurr",
+  "slug": "hypurr-hyperevm",
+  "image": "https://i2c.seadn.io/admin-uploads/3bb11488def4bfa3f6ffe399fc85be/613bb11488def4bfa3f6ffe399fc85be.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0xcc3d60ff11a268606c6a57bd6db74b4208f1d30c",
+  "name": "TinyHyperCats",
+  "slug": "tiny-hyper-cats-hyperevm",
+  "image": "https://i2c.seadn.io/admin-uploads/1522e3b0b2c92a464d40c816dbed0f/301522e3b0b2c92a464d40c816dbed0f.jpeg"
+ },
+ {
+  "chainId": 999,
+  "address": "0x63eb9d77d083ca10c304e28d5191321977fd0bfb",
+  "name": "Lucky Hypio Winners",
+  "slug": "hypio",
+  "image": "https://i2c.seadn.io/collection/hypio/image_type_logo/6836f9922707820970872d35744da3/0f6836f9922707820970872d35744da3.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0x43a9652e2b3ce8970e8d33d8c34252a59a6596aa",
+  "name": "Odd Otties",
+  "slug": "odd-otties-hyperevm",
+  "image": "https://i2c.seadn.io/hyperevm/0x43a9652e2b3ce8970e8d33d8c34252a59a6596aa/657a0c9e17c5562d1be07322b15650/ba657a0c9e17c5562d1be07322b15650.gif"
+ },
+ {
+  "chainId": 999,
+  "address": "0xbc4a26ba78ce05e8bcbf069bbb87fb3e1dac8df8",
+  "name": "PiP & Friends",
+  "slug": "pip-friends",
+  "image": "https://i2c.seadn.io/admin-uploads/0567fb5b0536e4520d239d965f15df/360567fb5b0536e4520d239d965f15df.jpeg"
+ },
+ {
+  "chainId": 999,
+  "address": "0xddab956f9eee629510b4410627cd63c0448a78ab",
+  "name": "Illumeownati",
+  "slug": "illumeownati",
+  "image": "https://i2c.seadn.io/hyperevm/0x46b6479406ff4c5728277a6670137ee364ac63f2/1b686f6aaff0a68057429dc08922c0/1a1b686f6aaff0a68057429dc08922c0.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0xea8cc2a7da4e91c559514b8192ef1cfe1497ac74",
+  "name": "MechaCats",
+  "slug": "mechacats-hyperevm",
+  "image": "https://i2c.seadn.io/admin-uploads/2bf843ccd86fdbf495eadd7504735a/c02bf843ccd86fdbf495eadd7504735a.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0x31ce9e3fd78b593c2f37f62ae0fa72a23a2472df",
+  "name": "BAE",
+  "slug": "bae-hyperevm",
+  "image": "https://i2c.seadn.io/hyperevm/0x31ce9e3fd78b593c2f37f62ae0fa72a23a2472df/6535f0c245b887c686189caaeb9c63/236535f0c245b887c686189caaeb9c63.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0xeaf58788a405f3253814b4559391a22be8616250",
+  "name": "Nest Positions NFT-V2",
+  "slug": "nest-positions-nft-v2",
+  "image": "https://raw2.seadn.io/hyperevm/0xeaf58788a405f3253814b4559391a22be8616250/80ebaf62b917e40d0a524fa9dc03e7/7a80ebaf62b917e40d0a524fa9dc03e7.svg"
+ },
+ {
+  "chainId": 999,
+  "address": "0xa24db49ba893a5dbb50ac67d41bdc0955d193ca7",
+  "name": "Illiquid",
+  "slug": "illiquid-hyperevm",
+  "image": "https://i2c.seadn.io/hyperevm/0xa24db49ba893a5dbb50ac67d41bdc0955d193ca7/f60d1b60b25948179e97af282f1d5f/84f60d1b60b25948179e97af282f1d5f.webp"
+ },
+ {
+  "chainId": 999,
+  "address": "0x8853fdd2f9bad000473b70f7a4a41b55abdcf3d4",
+  "name": "HYPE TERMINAL",
+  "slug": "hype-terminals",
+  "image": "https://i2c.seadn.io/hyperevm/5d71201365ab3a268b766b811319f0dd/4ff030039d421e02cd1fbd944f30e7/b54ff030039d421e02cd1fbd944f30e7.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0xaa4e97da017689a2be643fb359f4e0c6081c3159",
+  "name": "HypeRigs",
+  "slug": "hype-rigs",
+  "image": "https://i2c.seadn.io/collection/hyperigs-628570172/image_type_logo/fbe5fd0b5917de01713471e127bf2c/63fbe5fd0b5917de01713471e127bf2c.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0xfe46b458fd123633101cd4026fd5beb9855865c1",
+  "name": "Hype Tradoors",
+  "slug": "hypetradoors",
+  "image": "https://i2c.seadn.io/collection/hype-tradoors-897188215/image_type_logo/51f0009f5dc007d04ea5058513f502/2a51f0009f5dc007d04ea5058513f502.png"
+ },
+ {
+  "chainId": 999,
+  "address": "0x017097de3341097bd3e9a2648bb957c9a71c6475",
+  "name": "Hype Brokers",
+  "slug": "hype-brokers",
+  "image": "https://i2c.seadn.io/collection/hype-brokers/image_type_logo/81836002470ed5b449f02d0aed62e5/fb81836002470ed5b449f02d0aed62e5.gif"
+ },
+ {
+  "chainId": 999,
+  "address": "0xc0a1102714eb37fa1279ce643405cd2e912817a4",
+  "name": "HyperAlien",
+  "slug": "hyperalien-579101949",
+  "image": "https://i2c.seadn.io/collection/hyperalien-579101949/image_type_logo/3d93f9d216384168748ba139f2ef6f/d83d93f9d216384168748ba139f2ef6f.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "SMBtHCCC6RYRutFEPb4gZqeBLUZbMNhRKaMKZZLHi7W",
+  "name": "SMB Gen2",
+  "slug": "smb-gen2-solana",
+  "image": "https://i2c.seadn.io/admin-uploads/45442665023badef2c0fde71764025/5a45442665023badef2c0fde71764025.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "6mszaj17KSfVqADrQj3o4W3zoLMTykgmV37W4QadCczK",
+  "name": "Claynosaurz",
+  "slug": "claynosaurz",
+  "image": "https://i2c.seadn.io/admin-uploads/f42590508540fe2a29cf9769636493/85f42590508540fe2a29cf9769636493.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "J1S9H3QjnRtBbbuD4HjPV6RpRhwuk4zKbxsnCHuTgh9w",
+  "name": "Mad Lads",
+  "slug": "mad-lads",
+  "image": "https://i2c.seadn.io/collection/mad-lads/image_type_logo/b32beb975191af9b2051085bc904c4/e2b32beb975191af9b2051085bc904c4.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "1yPMtWU5aqcF72RdyRD5yipmcMRC8NGNK59NvYubLkZ",
+  "name": "Claynosaurz: Call of Saga",
+  "slug": "claynosaurz-call-of-saga",
+  "image": "https://i2c.seadn.io/collection/claynosaurz-call-of-saga/image_type_logo/d453fba72e004295edb56aad3ef217/e9d453fba72e004295edb56aad3ef217.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "D7sLW9uKZG3G7bNbWfMHvKSgVhU9nXdv7huTfepF5Jrh",
+  "name": "OTC Desks",
+  "slug": "otc-desks-189044808",
+  "image": "https://i2c.seadn.io/solana/33QG8aNtw4jGEGKuhSoD8PMeoW6PS9rZsyLP8VSxdL93/7178862d86bd21365aa5d75b3939dd/517178862d86bd21365aa5d75b3939dd.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "J6RJFQfLgBTcoAt3KoZFiTFW9AbufsztBNDgZ7Znrp1Q",
+  "name": "Galactic Geckos",
+  "slug": "galactic-geckos-solana",
+  "image": "https://i2c.seadn.io/solana/HVhC63czpGLeyLK6wpMkxfDjtzZtnFv5HEXAoLhs7f4T/42c4ae4cae4a483fe3d58f47d64b03/5f42c4ae4cae4a483fe3d58f47d64b03.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "8Rt3Ayqth4DAiPnW9MDFi63TiQJHmohfTWLMQFHi4KZH",
+  "name": "SMB Gen3",
+  "slug": "smb-gen3-solana",
+  "image": "https://i2c.seadn.io/solana/5FvSmx7zCWhJKtYnQze6an2ft4hcZ9SST8iWP4jYrbgk/8652547ab209524ac46871accdf58c/a28652547ab209524ac46871accdf58c.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "9bxFnciJ6PBRiEzqRhfoqypD5FjjUgxt8STkz9PVeaUR",
+  "name": "Stonk Cats",
+  "slug": "stonk-cats-193600154",
+  "image": "https://i2c.seadn.io/solana/A38RaS3Z11jcMm2YKns1rn9eQ8ZTdfxouRY445Wi3dKj/a7e7df119ab15006163115bccea51d/5ca7e7df119ab15006163115bccea51d.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "CRittErsK51xrVktQeMeAW2cK7JNqv6Ko9Zrw26eF2cT",
+  "name": "Critters Quest",
+  "slug": "critters-solana",
+  "image": "https://i2c.seadn.io/solana/7HPuZiz9oRHFiQs5zTUEbHe4xyxSE6Nzb5fjWjtb3cQo/01fddf0a034c0eb16bf838922b8736/cf01fddf0a034c0eb16bf838922b8736.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "HF6SFg5RkWNQrEhmnXV7H8EmLPxg3jDaggEni1SMVAi6",
+  "name": "Degenerate Ape Academy",
+  "slug": "degenerate-ape-academy",
+  "image": "https://i2c.seadn.io/admin-uploads/1db2a7e4ddc5be6571ea3be5022825/181db2a7e4ddc5be6571ea3be5022825.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "2kEAck1FyW8TxB5SprEnasb4gkaahTdDV83wPtxm9y32",
+  "name": "Cyber Frogs",
+  "slug": "cyber-frogs",
+  "image": "https://i2c.seadn.io/admin-uploads/b63573e0c1c572dfd205c950ea3f39/76b63573e0c1c572dfd205c950ea3f39.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "pyTh2UtBKfuDW6KCdT3swospYeoLmmKaGujWA91Moru",
+  "name": "Pythenians",
+  "slug": "pythenians-142749237",
+  "image": "https://i2c.seadn.io/solana/71Vw9BRdLAixT2AsYzN21rtPHjeBwiWLbLhitVteDfd5/b39fc6310e384850475810bad86a06/bfb39fc6310e384850475810bad86a06.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "aLs8rXD8NoYwgnCFzBofsGdwaocePAkzT1UFX1WmwaR",
+  "name": "Bored Ape Solana Club",
+  "slug": "als8rxd8noywgncfzbofsgdwaocepakzt1ufx1wmwar",
+  "image": "https://creator-hub-prod.s3.us-east-2.amazonaws.com/bored_ape_solana_club_pfp_1773034207596.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "DUX8SZXLKigc84BBUcYjA7PuKe2SFwXFtQVgwmBsaXKm",
+  "name": "Retardio Cousins",
+  "slug": "retardio-cousins-solana",
+  "image": "https://i2c.seadn.io/solana/4WCKvF9r8AQYwJepVsgttZJqkAeKXMb138MQHyFFFxYN/b0084a776fd88c5d1087edcc4af1ca/10b0084a776fd88c5d1087edcc4af1ca.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "5KwhyPToqeGQYmRQjnx3EDSRMnaiCJDMEH3aGT8R3HNc",
+  "name": "Thugbirdz",
+  "slug": "thugbirdz-solana",
+  "image": "https://i2c.seadn.io/solana/3UhiPckhddQuWYbP7m4uMxFBJjqFhW3qGirmaSFSuegL/50bce1f9597529f4a9de993aaacee4/cf50bce1f9597529f4a9de993aaacee4.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "69k55dCTwiUPNgaTZ8FVMADorTvEGJEGuAGEB7m1qB1S",
+  "name": "Bodoggos",
+  "slug": "bodoggos",
+  "image": "https://i2c.seadn.io/solana/EdTB6hL9F9cvEVMt6FF1CpWiPoKVT1kk1cM7TJJ9sgKc/68b335d4f15467396895e6933e3493/6d68b335d4f15467396895e6933e3493.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "CLBrjmoDCFvrW8ukxXtDrBXWkL7Yx8PKspKaBPFxhpmL",
+  "name": "Smyths",
+  "slug": "smyths-393973796",
+  "image": "https://i2c.seadn.io/solana/2YC9TacPK11qcMvUZ8fR9P5kUZVtvksHCNqbPiaVNpa9/893a4343381eab6dc019d10dd61131/c2893a4343381eab6dc019d10dd61131.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "CKPYygUZ9aA4JY7qmyuvxT67ibjmjpddNtHJeu1uQBSM",
+  "name": "Critters Cult",
+  "slug": "critters-cult-solana",
+  "image": "https://i2c.seadn.io/admin-uploads/035d64449561a91a4ea90fe66e5ed2/f2035d64449561a91a4ea90fe66e5ed2.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "C5gHBKXwA8jduXNk3HyAVLnLBN6PEM8fTqkNNh5uyyjJ",
+  "name": "The Bullpen",
+  "slug": "the-bullpen-solana",
+  "image": "https://i2c.seadn.io/solana/J3jqFG6x6v67W2TfevpAbiwbNXTaPKhG4sFAwwZanuga/304fedd9d77816c05f4cf7d09340c4/3d304fedd9d77816c05f4cf7d09340c4.webp"
+ },
+ {
+  "chainId": 792703809,
+  "address": "C7on9fL8YFp5W6M7a6SvehMKBppauZXu2eYDTZG4BN2i",
+  "name": "Frogana",
+  "slug": "frogana-solana",
+  "image": "https://i2c.seadn.io/solana/7gDeEXoedxExnid7bfgZm6woqWRbxzjJEq7iwt4cextp/f5ce9dc482fc49b985b933ce83a0d6/42f5ce9dc482fc49b985b933ce83a0d6.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "EeV6ryEzptbJpCdUNznqt52QhYaRAytE1pZMFUAjwFxm",
+  "name": "Grimoire",
+  "slug": "grimoire-324808527",
+  "image": "https://i2c.seadn.io/solana/ALDTUAt24hDJ9tASTqhfSU2qUBjVG66CTvLrAe4bF1h7/97c6b551ca48489e7fa2f348df0ea4/7e97c6b551ca48489e7fa2f348df0ea4.gif"
+ },
+ {
+  "chainId": 792703809,
+  "address": "TRAgFWPMRwSBF7mQ6avNFS9d8NPWkiBmXJfvHn2Hvbf",
+  "name": "Trencher",
+  "slug": "trencher-sol",
+  "image": "https://i2c.seadn.io/admin-uploads/029818bc67f1d65dc4b4033609f60e/c7029818bc67f1d65dc4b4033609f60e.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "LouoPer39a8x9KZ4nWXmeSFetgorr82pEErhU9EmxZW",
+  "name": "Cets",
+  "slug": "cets-solana",
+  "image": "https://i2c.seadn.io/solana/6QUeAfWucuzbf1DgFdyZCrtGihdQTeDWzxvMyweGkjC1/1b04f20ea7dc60400a9eccf8b99c4a/0b1b04f20ea7dc60400a9eccf8b99c4a.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "w44WvLKRdLGye2ghhDJBxcmnWpBo31A1tCBko2G6DgW",
+  "name": "MidEvil",
+  "slug": "midevil-solana",
+  "image": "https://i2c.seadn.io/admin-uploads/c570a8b0296b7b0cc43e207ab8a39b/04c570a8b0296b7b0cc43e207ab8a39b.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "AAG6dgqaSdSToaCTyH8W6GBk6sZdu9jC3TUDfy7eLEmz",
+  "name": "Primates",
+  "slug": "primates-915359012",
+  "image": "https://i2c.seadn.io/solana/7ZB45VwhinbVNw78E7vzyJxX4z8KNtCSk5xS8cy7Bc2z/94c4830ce1f284a26a9e6bcb0e34fe/b994c4830ce1f284a26a9e6bcb0e34fe.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "Dn5qsJJj4mKBdYQiXFfrS5PSNPwAakK6XSpvAxqH6v2C",
+  "name": "Meatbags",
+  "slug": "meatbags-870788115",
+  "image": "https://i2c.seadn.io/solana/3dZ9M3S7EYEBqqRmxKaRAgfnjVVzEvtnYLwaZitVdJSJ/6b031bf558b439750067cc5e088424/c16b031bf558b439750067cc5e088424.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "61rt1XVKGwofv4Jyh1RJntH8MQBXdGBrwJgGtjEPJ86d",
+  "name": "The Misfits Order",
+  "slug": "the-misfits-order-solana",
+  "image": "https://i2c.seadn.io/admin-uploads/0ce43b276033e3d0f34085d0342232/030ce43b276033e3d0f34085d0342232.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "2CNP3MVmCj5FEFja676PkvS8Rm7ZVCxdsPWkLgqHb87e",
+  "name": "Doge Capital",
+  "slug": "doge-capital",
+  "image": "https://i2c.seadn.io/solana/HGf145QYwPuGjKw9cBeCb3t6ZYtL5FhGEzKLWWJzXAjy/767d5070f97c8505427406f1a6dd60/d6767d5070f97c8505427406f1a6dd60.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "8kYjcqW5kd77RS6twFKMXbP59bGUfC1sC3uvGkBRS6T9",
+  "name": "BASC",
+  "slug": "basc-156863175",
+  "image": "https://i2c.seadn.io/solana/8RGSgDAq1e3hrLKXczWUz1tQv95ttSLRahfY9M4PqWNi/9a445a99d5c5a56c3159b622077f29/d29a445a99d5c5a56c3159b622077f29.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "5f2PvbmKd9pRLjKdMr8nrK8fNisLi7irjB6X5gopnKpB",
+  "name": "sharx by sharky.fi",
+  "slug": "sharx-by-sharky-fi-solana",
+  "image": "https://i2c.seadn.io/solana/Hxwfxfo2ZWVWAe9nbJADJtLjsPhkqEnctiHckf245ym1/d390157b3069ed649e343ff67e859f/cbd390157b3069ed649e343ff67e859f.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "EAzEpagtyeRAx9npnpVMpygoA8ouX7DRpLTghhPvYTiu",
+  "name": "Card NFT 2",
+  "slug": "cardnft2",
+  "image": "https://i2c.seadn.io/collection/cardnft2/image_type_logo/1b016136ba859f7aa4c008d4fe6c3f/a21b016136ba859f7aa4c008d4fe6c3f.gif"
+ },
+ {
+  "chainId": 792703809,
+  "address": "7ifrcfFwVLBUKCo8smEK44npokR1xK8KHopRV98Moj8f",
+  "name": "Doopies",
+  "slug": "doopies-solana",
+  "image": "https://i2c.seadn.io/solana/zYpS9gmh2uPa3LQC331SdHTwTZCukV1z4P3aRmp9c4p/fbf3ea50526f5cd3734378b02a63f9/cefbf3ea50526f5cd3734378b02a63f9.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "71tyVbvaxjuQze8wXG7Gxsc8HRPnehX349VcGFzKskZA",
+  "name": "Jelly Rascals",
+  "slug": "jelly-rascals-51037591",
+  "image": "https://i2c.seadn.io/solana/5t2KtedJiKTLzEYMyGFhHjYxQQmLunkiEKbH9HuDN6pY/21566c7077e2071dd57fcae88ec4a0/fa21566c7077e2071dd57fcae88ec4a0.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "DraEs2NBaqC1N5rdMe9xLkvFpDS1jrMSRuNdjnFzNDqZ",
+  "name": "Rogues",
+  "slug": "rogues-solana",
+  "image": "https://i2c.seadn.io/admin-uploads/8bed9534c341af44676fdeebd8a9c8/c48bed9534c341af44676fdeebd8a9c8.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "G5tKp9bCZxLVpa9r71by1J9BQ4kwA3zj5YjJbg2czrGg",
+  "name": "Kups",
+  "slug": "kups-961195716",
+  "image": "https://i2c.seadn.io/solana/G1D91iJNbPWfF75QJG1ZSeE4GMSLaMgTXGiD2NS4nFkp/e7b286964440f0327c27d17a790eb7/7ae7b286964440f0327c27d17a790eb7.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "TRPtM4wm1CzoEhZMqt4puMBhe1AGa5kz3csPwSa3Wej",
+  "name": "Trencher Packs",
+  "slug": "trencher-packs",
+  "image": "https://i2c.seadn.io/admin-uploads/8e5efda703ab3fdb1ed3dc103cff72/9a8e5efda703ab3fdb1ed3dc103cff72.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "P2bPqREHLN3BpdRjKJeE1nRNKY72xdEUcdRH2V1x1ps",
+  "name": "<Player2>",
+  "slug": "player2",
+  "image": "https://i2c.seadn.io/solana/HaNGHUkAocYJy46qoR2UKieGucoDLTwuByyZBo6rbvw6/0b700709453e666cced30f1c57ded4/240b700709453e666cced30f1c57ded4.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "7WXiaJQBsfEGgp7Z6CcWPoiVCThadMptGR44ZKPWQW9E",
+  "name": "GOATS",
+  "slug": "goats-solana",
+  "image": "https://i2c.seadn.io/collection/goats-solana/image_type_logo/e02fa07c14dce8374d2d80dc0cc9f8/35e02fa07c14dce8374d2d80dc0cc9f8.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "5ucdKHbPfmsWowXSNfHoiYEJ55kfFmvEdHii5RtjHpiH",
+  "name": "Wolf Capital",
+  "slug": "wolf-capital-solana",
+  "image": "https://i2c.seadn.io/admin-uploads/a927a46305d26b572625c0ed04af53/6ba927a46305d26b572625c0ed04af53.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "VCMAdYXzhCkbnQSFvnai93Q2FP4D59P9pS2PRTx9LU8",
+  "name": "Pack Bundle",
+  "slug": "pack-bundle-942787183",
+  "image": "https://i2c.seadn.io/solana/8XVwvUsgwwZCBVrGakLd5UbFHkJWD3X3kjPGo7mB7Cno/679cfb874860fd00c07e3d08c5d498/e7679cfb874860fd00c07e3d08c5d498.gif"
+ },
+ {
+  "chainId": 792703809,
+  "address": "8vysLESpxdEexvUEt75r3UTp9CtuGjaqDZNQFcnFn6BH",
+  "name": "BullBears",
+  "slug": "bullbears-459689055",
+  "image": "https://i2c.seadn.io/solana/4MAr3TX5nRjB4gQZqzsVJKRLkQ6NCSNy5zxkn6N6CB8H/85a6768ab2318e58ed7a9eccdf6c0c/5785a6768ab2318e58ed7a9eccdf6c0c.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "3RxiT9p6PiNffpxCKWXzpb5pNU9g6ycjeR8NxUkaJaBb",
+  "name": "DUMPSTR Bags",
+  "slug": "dumpstr-bags",
+  "image": "https://i2c.seadn.io/solana/4JMbGA3ttKwnczgTAiWiexT1VH6fis8Wqr3rnfmZctfA/5242d100c0ba94269cf3531b55769b/795242d100c0ba94269cf3531b55769b.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "5MHivjyerNY1KgjrqqMnM9z7s7BWapstbkzxTUBkZjQU",
+  "name": "Bulltoshi",
+  "slug": "bulltoshi",
+  "image": "https://i2c.seadn.io/solana/tvA2YuJbj5CgDrwiUcLptiX56oTW6xxqLwb8BLD66CM/c97dbdc72376f61eb4330d1f665d39/d6c97dbdc72376f61eb4330d1f665d39.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "AgqEBjFi7pGfFMgaPxmjYRxYeDE1Eq3Pw72CYzdzyBvA",
+  "name": "Micros",
+  "slug": "micros-solana",
+  "image": "https://i2c.seadn.io/solana/6eFGC8VFp1bzPio1VenXUMrz9KT5kTupEMyCPeCCoioN/d3534c5d9af3bc04ff3fad70290adb/2cd3534c5d9af3bc04ff3fad70290adb.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "9ysVw1NQqZF3sryWvv5WegVp1rmhFDqCvz83Z2ZhrTAg",
+  "name": "Webkidz",
+  "slug": "webkidz",
+  "image": "https://i2c.seadn.io/solana/5Kf1va6W75m5Ko9feFmxy1Gyg6THtoUvSjjhnj3ggMGU/cbcb5e49601bc44d5c04aaac91f45b/ffcbcb5e49601bc44d5c04aaac91f45b.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "HgT3fbwuVcbeKgd8x7gP5UmeVmzYDD46HxuZbZWosS2y",
+  "name": "Liminals",
+  "slug": "liminals-484986638",
+  "image": "https://i2c.seadn.io/solana/8rz5QzYdiw1mA8xaMaKxSC3sE6eVMyzL7nAgrPDGs3RW/0946fb355148df7f73e6d4c8b6ac00/c00946fb355148df7f73e6d4c8b6ac00.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "4BSg57JLDQFpGeGMQUeTRGbMGYCwqYKbdzFqPGhgP5nj",
+  "name": "GigaBuds",
+  "slug": "gigabuds-solana",
+  "image": "https://i2c.seadn.io/solana/BeXbfZTW1bCZZS2rzwMVYNbqkCTZ4dsg2AaN9uMf7EQw/817553a65689b91490ed63dbd49b91/9a817553a65689b91490ed63dbd49b91.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "J7rxtKmEpNJEtrfkagiTF1gsmLyVus6BQZFY4ouBkeMG",
+  "name": "J7rxtKmEpNJEtrfkagiTF1gsmLyVus6BQZFY4ouBkeMG",
+  "slug": "j7rxtkmepnjetrfkagitf1gsmlyvus6bqzfy4oubkemg",
+  "image": "https://i2c.seadn.io/solana/CVJoQrsdgnXsHEaCysrerQaikAtFG9fKL1z4bppMwHK3/6b545971cb1de354651868b43e88b1/4d6b545971cb1de354651868b43e88b1.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "FXUyYJ7j71d3WtF4WcjaHM9EfgVV1csgkiNStyDgzYSS",
+  "name": "PFP GEN2",
+  "slug": "pfp-gen2-639919954",
+  "image": "https://i2c.seadn.io/solana/bc7rzUsfHZ8ckK4PydRJ1DQpGtwK4oJmSSpnbvpk7XN/3ba27f5e4b689508654f8c9b41920f/ef3ba27f5e4b689508654f8c9b41920f.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "9DqJWp9jF2M7F5Be8Sxs1GSJz7HZYVcyFgyMU9CBLmUQ",
+  "name": "The Conmen",
+  "slug": "the-conmen-solana",
+  "image": "https://i2c.seadn.io/solana/Azs1Q8SJpEYfijsAFhJ9ZNYSVDTNDg2SqRFTLxRrpphk/da457bd0454113c07edc36ab4d8551/90da457bd0454113c07edc36ab4d8551.webp"
+ },
+ {
+  "chainId": 792703809,
+  "address": "yY21qPjqf7Qb4WZZ7gJf8xnJhZoPU16jrBPXh6MzJ8j",
+  "name": "Candy DC",
+  "slug": "candy-dc",
+  "image": "https://i2c.seadn.io/collection/candy-dc/image_type_logo/ce41d8b98a029c1b4dc84278842a00/fbce41d8b98a029c1b4dc84278842a00.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "CQitemHGamDdQiSzYp11ifmz588zkPy4rgRJStzAw12q",
+  "name": "Critters Quest Items",
+  "slug": "critters-quest-items",
+  "image": "https://i2c.seadn.io/solana/A1Xi4oALc77hYjd6AMwTWCdqoEzSPfJ5VNoNWiJ3ytw7/deff66c5bdc55b2f280834c168939a/b7deff66c5bdc55b2f280834c168939a.gif"
+ },
+ {
+  "chainId": 792703809,
+  "address": "4D7Ff6oEzP2JnLdxmbjiNsG29k5AuGMFvwEhjVKv5ziJ",
+  "name": "Syndicate Capos",
+  "slug": "syndicate-capos",
+  "image": "https://i2c.seadn.io/solana/DtpitpdF192GrZrjVc4AecjpZYwrzRhtDjne4ALRTXr1/8b1da276b169ced8685c258c94b10a/328b1da276b169ced8685c258c94b10a.webp"
+ },
+ {
+  "chainId": 792703809,
+  "address": "TRNNqxjptkX8SD4r7UjvNDzXpTxu3RT7Tm55X5yi7GW",
+  "name": "Trencher Traits",
+  "slug": "trencher-traits",
+  "image": "https://i2c.seadn.io/admin-uploads/af982bc244bdb2f30e45324e1b7816/29af982bc244bdb2f30e45324e1b7816.jpeg"
+ },
+ {
+  "chainId": 792703809,
+  "address": "46kCejJ7euGEmLAFqvV1j5yUzEumtwEvS9d65f6PbZ7g",
+  "name": "Candy MLB",
+  "slug": "candy-mlb",
+  "image": "https://i2c.seadn.io/collection/candy-mlb/image_type_logo/0e6656b68e860e7ae98bcbd2b6772d/7d0e6656b68e860e7ae98bcbd2b6772d.png"
+ },
+ {
+  "chainId": 792703809,
+  "address": "5iZARRMzxGpYyq9gn5CmJTz36JAruVkTLnn2QZnbye8C",
+  "name": "DRiP Shared Collection",
+  "slug": "drip-shared-collection",
+  "image": "https://i2c.seadn.io/solana/2ZyxAjiHfDncZA9TgCWGC6qHMzuYqyxQAdARtuM8zW7t/bbbe247eab35ab0d08a704a4eea26a/33bbbe247eab35ab0d08a704a4eea26a.png"
  }
 ]
