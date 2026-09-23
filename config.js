@@ -13,10 +13,10 @@ export const CONFIG = {
   externalLauncher: "0xdbe1b07b2e5c4d4c32c4813c360ba3341f766270", // Ethereum / Base / BNB collections
   // Chains a coin can collect NFTs on. Ids for non-Robinhood chains follow Relay's chain ids.
   chains: {
-    4663: { name: "Robinhood", evm: true, currency: "ETH", explorer: "https://robinhoodchain.blockscout.com", opensea: "robinhood" },
-    1: { name: "Ethereum", evm: true, currency: "ETH", explorer: "https://etherscan.io", rpc: "https://ethereum-rpc.publicnode.com", opensea: "ethereum" },
-    8453: { name: "Base", evm: true, currency: "ETH", explorer: "https://basescan.org", rpc: "https://base-rpc.publicnode.com", opensea: "base" },
-    56: { name: "BNB", evm: true, currency: "BNB", explorer: "https://bscscan.com", rpc: "https://bsc-rpc.publicnode.com", opensea: "bsc" },
+    4663: { name: "Robinhood", evm: true, currency: "ETH", explorer: "https://robinhoodchain.blockscout.com", opensea: "robinhood", icon: "assets/chains/robinhood.png" },
+    1: { name: "Ethereum", evm: true, currency: "ETH", explorer: "https://etherscan.io", rpc: "https://ethereum-rpc.publicnode.com", opensea: "ethereum", icon: "assets/chains/ethereum.png" },
+    8453: { name: "Base", evm: true, currency: "ETH", explorer: "https://basescan.org", rpc: "https://base-rpc.publicnode.com", opensea: "base", icon: "assets/chains/base.jpg" },
+    56: { name: "BNB", evm: true, currency: "BNB", explorer: "https://bscscan.com", rpc: "https://bsc-rpc.publicnode.com", opensea: "bsc", icon: "assets/chains/bnb.png" },
   },
   collectionsUrl: "collections.json", // names + marketplace slugs for listed collections
 };

@@ -294,3 +294,8 @@ a.coin { display: block; }
 .dest { display: flex; gap: 6px; }
 .dest input { min-width: 180px; padding: 8px 10px; font-size: 13px; }
 .coin .pill-chain { display: inline-block; margin-top: 6px; }
+.chain-icon { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; flex: none; background: #fff; }
+.pill-chain { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; font-style: normal; }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.chip .chain-icon { width: 18px; height: 18px; }
+.pv-rows .chain-icon { vertical-align: -3px; margin-left: 4px; }

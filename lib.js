@@ -19,6 +19,19 @@ export const externalLive = isAddress(CONFIG.externalLauncher || "");
 export const ROBINHOOD = CONFIG.chainId;
 export const chainName = (id) => CONFIG.chains[Number(id)]?.name || `Chain ${id}`;
 
+/** Round chain logo; pages that load from a sub-folder pass `base = "../"` is not needed since
+ *  every page lives at the site root. */
+export function chainIcon(id) {
+  const c = CONFIG.chains[Number(id)];
+  return c?.icon ? `<img class="chain-icon" src="${c.icon}" alt="" width="16" height="16" />` : "";
+}
+
+/** Logo + name pill, e.g. for coin cards and collection rows. */
+export const chainBadge = (id) => `<span class="pill-chain">${chainIcon(id)}${esc(chainName(id))}</span>`;
+
+/** Chain id for a display name (used by the filter chips). */
+export const chainIdByName = (name) => Number(Object.keys(CONFIG.chains).find((k) => CONFIG.chains[k].name === name));
+
 export const ABI = {
   pons: parseAbi([
     "function launchFee() view returns (uint256)",
@@ -365,7 +378,7 @@ export function coinCard(c) {
     <div class="art" style="background:linear-gradient(135deg, ${colorFor(c.symbol)}, #1b1d21)">$${esc(c.symbol)}</div>
     <div class="body">
       <h4>${esc(c.name)} <small>${esc(c.policy || "")}</small></h4>
-      ${c.chainId && c.chainId !== ROBINHOOD ? `<span class="pill-chain">${esc(chainName(c.chainId))}</span>` : ""}
+      ${chainBadge(c.chainId || ROBINHOOD)}
       <div class="meta"><span>Collects <b>${esc(c.collectionName)}</b></span></div>
       <div class="meta"><span>Vault <b>${eth(c.vaultBalance)} ETH</b></span><span><b>${c.nfts}</b> NFTs</span></div>
     </div>

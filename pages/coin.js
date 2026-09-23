@@ -1,6 +1,6 @@
 import {
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, loadLaunch, loadRaffles, write,
-  eth, short, addrLink, txLink, colorFor, chainName, externalTxLink,
+  eth, short, addrLink, txLink, colorFor, chainName, externalTxLink, chainBadge, ROBINHOOD,
 } from "../lib.js";
 
 renderChrome("explore.html");
@@ -41,7 +41,7 @@ async function render() {
       <div class="coin-badge" style="background:linear-gradient(135deg, ${colorFor(l.symbol)}, #1b1d21)">$${esc(l.symbol)}</div>
       <div>
         <h1 class="page-title">${esc(l.name)}</h1>
-        <p class="muted">Collects ${l.external ? `<b>${esc(l.collectionName)}</b> on ${esc(chainName(l.chainId))}` : addrLink(l.collection, l.collectionName)} · Policy <b>${l.policy}</b> · Created by ${addrLink(l.creator)}</p>
+        <p class="muted">Collects ${l.external ? `<b>${esc(l.collectionName)}</b>` : addrLink(l.collection, l.collectionName)} ${chainBadge(l.external ? l.chainId : ROBINHOOD)} · Policy <b>${l.policy}</b> · Created by ${addrLink(l.creator)}</p>
         <div class="cta-left">
           <a class="btn btn-dark" href="${CONFIG.explorer}/token/${l.token}" target="_blank" rel="noopener">Token on explorer</a>
           <button class="btn btn-ghost" id="harvest">Harvest ${eth(l.pending, 4)} ETH</button>
