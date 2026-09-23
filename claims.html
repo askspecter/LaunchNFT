@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claims · LaunchNFT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page">
+    <h1 class="page-title">Claims</h1>
+    <p class="lead-left">Raffle prizes are delivered automatically by the keeper. If a delivery is still pending, you can claim your NFT here with the published snapshot proof.</p>
+    <div class="card" id="mine"><p>Connect your wallet to see raffles you have tickets in.</p><button class="btn btn-dark" data-connect-inline>Connect wallet</button></div>
+    <h2 class="sub">Recent draws</h2>
+    <div class="table-wrap"><table class="table" id="draws"><thead><tr><th>Coin</th><th>NFT</th><th>Status</th><th>Winner</th></tr></thead><tbody><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table></div>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="pages/claims.js"></script>
+</body>
+</html>

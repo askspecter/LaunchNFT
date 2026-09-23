@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Explore · LaunchNFT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page">
+    <div class="row-head">
+      <h1 class="page-title">Explore</h1>
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-sort="new">New</button>
+        <button class="tab" data-sort="vault">Top vault</button>
+        <button class="tab" data-sort="nfts">Most NFTs</button>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <input class="search" id="search" placeholder="Search by name, ticker or collection" />
+    <div class="grid" id="grid"><p class="empty">Loading…</p></div>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="pages/explore.js"></script>
+</body>
+</html>

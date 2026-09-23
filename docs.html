@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docs · LaunchNFT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page docs">
+    <h1 class="page-title">How LaunchNFT works</h1>
+    <p class="lead-left">Every coin is a normal Pons V2 launch on Robinhood Chain. The difference is where its creator fees go: into a vault that can only ever buy NFTs from one collection.</p>
+
+    <nav class="toc">
+      <a href="#launch">Launching</a><a href="#fees">Fees</a><a href="#vault">The vault</a>
+      <a href="#raffles">Raffles</a><a href="#keeper">The keeper</a><a href="#contracts">Contracts</a><a href="#risks">Risks</a>
+    </nav>
+
+    <section id="launch">
+      <h2>1. Launching</h2>
+      <p>Pick a listed NFT collection and one of three policies for the NFTs the vault buys: <b>raffle</b> them to holders, <b>hold</b> them forever, or <b>burn</b> them. You pay only the Pons launch fee. In a single transaction the Launcher deploys a vault and a fee router, then calls Pons with the router set as the coin's creator-fee recipient.</p>
+      <p>The collection, the policy and the fee recipient cannot be changed afterwards. The router has no function that could hand the recipient role to anyone else.</p>
+    </section>
+
+    <section id="fees">
+      <h2>2. Fees</h2>
+      <p>Trades on the Pons curve pay a trading fee. The creator share of that fee, plus any optional creator tax you set (up to 10%), accrues to the fee router. <code>harvest()</code> can be called by anyone. It sweeps the curve into the Pons escrow, claims the ETH and splits it: <b>80% to the vault</b>, 20% to the protocol treasury.</p>
+    </section>
+
+    <section id="vault">
+      <h2>3. The vault</h2>
+      <ul>
+        <li>It can only spend ETH through an allow-listed marketplace (Seaport 1.6).</li>
+        <li>Every purchase must be at or below a price ceiling posted by the keeper, and ceilings expire after one hour.</li>
+        <li>The purchase reverts unless the vault ends up owning the exact NFT from its collection and spent no more than the stated price.</li>
+        <li>There is no withdraw function. ETH leaves only as payment for NFTs.</li>
+        <li>It rejects NFTs from any other collection.</li>
+      </ul>
+    </section>
+
+    <section id="raffles">
+      <h2>4. Raffles</h2>
+      <ol>
+        <li>The keeper replays the coin's transfers and gives each wallet tickets in proportion to its balance. Contracts such as the curve, pools and the vault get none. It publishes the Merkle root on-chain and the full snapshot, with proofs, as a JSON file.</li>
+        <li>The snapshot stays public for 15 minutes so anyone can check it.</li>
+        <li>Anyone calls <code>commitDraw</code>, which pins a chain block about 20 blocks in the future. Nobody knows its hash yet.</li>
+        <li>Anyone calls <code>draw</code> once that block exists. The winning ticket comes from its hash.</li>
+        <li>The keeper delivers the NFT to the winner with the Merkle proof. The winner can also claim it on the <a href="claims.html">Claims</a> page.</li>
+      </ol>
+    </section>
+
+    <section id="keeper">
+      <h2>5. The keeper</h2>
+      <p>An off-chain bot that calls harvest, posts price ceilings, fills the cheapest listing when the vault can afford it, and runs raffles. It can only do what the contracts allow. It cannot withdraw ETH, change a coin's collection or policy, or send NFTs anywhere except to a raffle winner with a valid proof.</p>
+    </section>
+
+    <section id="contracts">
+      <h2>6. Contracts</h2>
+      <dl class="addresses" id="addresses"></dl>
+    </section>
+
+    <section id="risks">
+      <h2>7. Risks</h2>
+      <ul>
+        <li>The contracts have not been independently audited.</li>
+        <li>The keeper chooses the ceiling and which listing to buy. The contract bounds this, but a dishonest keeper could still overpay up to the ceiling.</li>
+        <li>After a coin graduates to its pool, pool fees reach the escrow when Pons's operator sweeps them.</li>
+        <li>Memecoins are highly volatile. Nothing here is financial advice.</li>
+      </ul>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module">
+    import { CONFIG, renderChrome, addrLink, isAddress, client, ABI } from "./lib.js";
+    renderChrome("docs.html");
+    const rows = [
+      ["Launcher", CONFIG.launcher],
+      ["Pons V2 factory", CONFIG.ponsFactory],
+      ["Seaport 1.6", CONFIG.seaport],
+    ];
+    const el = document.getElementById("addresses");
+    const draw = () => (el.innerHTML = rows.map(([k, a]) => `<dt>${k}</dt><dd>${isAddress(a) ? addrLink(a, a) : "not deployed yet"}</dd>`).join(""));
+    draw();
+    if (isAddress(CONFIG.launcher)) {
+      const registry = await client.readContract({ address: CONFIG.launcher, abi: ABI.launcher, functionName: "registry" });
+      rows.splice(1, 0, ["Registry", registry]);
+      draw();
+    }
+  </script>
+</body>
+</html>

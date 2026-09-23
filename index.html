@@ -11,20 +11,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="nav">
-    <a href="#" class="brand">launch<span>nft</span><i>.</i></a>
-    <nav class="nav-links" id="navLinks">
-      <a href="#launches">Explore</a>
-      <a href="#how">How it works</a>
-      <a href="#rules">Rules</a>
-      <a href="#faq">FAQ</a>
-    </nav>
-    <div class="nav-actions">
-      <button class="btn btn-ghost" id="connectBtn">Connect</button>
-      <button class="btn btn-dark" data-open-launch>Launch</button>
-      <button class="burger" id="burger" aria-label="Menu">☰</button>
-    </div>
-  </header>
+  <header id="site-header"></header>
 
   <main>
     <section class="hero">
@@ -77,6 +64,7 @@
         </div>
       </div>
       <div class="grid" id="grid"></div>
+      <p class="more"><a class="btn btn-ghost" href="explore.html">View all launches →</a></p>
     </section>
 
     <section class="section" id="faq">
@@ -91,18 +79,7 @@
     </section>
   </main>
 
-  <footer class="footer">
-    <div>
-      <a href="#" class="brand">launch<span>nft</span><i>.</i></a>
-      <p>Coins whose fees buy NFT floors. Vault rules are enforced on-chain.</p>
-    </div>
-    <div class="foot-links">
-      <a href="#launches">Explore</a>
-      <a href="#how">How it works</a>
-      <a href="#faq">FAQ</a>
-    </div>
-    <small>© <span id="year"></span> LaunchNFT. Not affiliated with Robinhood Markets or Pons. Not financial advice.</small>
-  </footer>
+  <footer id="site-footer"></footer>
 
   <dialog id="launchDialog">
     <form method="dialog" id="launchForm">
@@ -128,7 +105,6 @@
     </form>
   </dialog>
 
-  <div class="toast" id="toast"></div>
   <script type="module" src="app.js"></script>
 </body>
 </html>
