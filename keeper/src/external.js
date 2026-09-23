@@ -1,14 +1,14 @@
-// Keeper flow for coins whose collection lives on another chain (Ethereum, Base, BNB Chain).
+// Keeper flow for coins whose collection lives on another chain (Ethereum, Base, Hyperliquid, Solana).
 //
 // Per external vault, each pass:
-//   1. price the cheapest OpenSea listing on the target chain, in ETH (via a Relay quote for BNB);
+//   1. price the cheapest listing on the target chain, in ETH (via a Relay quote for HYPE/SOL);
 //   2. if the vault can afford it and nothing is in flight, announce a withdrawal (1h delay,
 //      cancellable by the registry owner);
 //   3. once ready, execute it and bridge the ETH to the keeper's wallet on the target chain;
 //   4. buy the listing there, burn it if the coin's policy says so, and record it on Robinhood Chain;
-//   5. deliver raffle prizes the Raffles contract assigned to the winner's same address there,
-//      and mark them delivered.
-import { createPublicClient, createWalletClient, http, defineChain, parseAbi, getAddress, formatEther } from "viem";
+//   5. deliver raffle prizes the Raffles contract assigned (EVM: same address; Solana: the
+//      destination the winner saved) and mark them delivered.
+import { createPublicClient, createWalletClient, http, defineChain, parseAbi, getAddress, keccak256, toHex, formatEther } from "viem";
 import * as relay from "./relay.js";
 import { log, warn } from "./log.js";
 
@@ -28,6 +28,7 @@ export const extVaultAbi = parseAbi([
   "function totalSpent() view returns (uint256)",
   "function held(uint256) view returns (bool)",
   "function prizeOwedTo(uint256) view returns (address)",
+  "function prizeDestination(uint256) view returns (bytes32)",
   "function announceWithdrawal(uint256 amount)",
   "function executeWithdrawal()",
   "function recordPurchase(uint256 tokenId, uint256 price, bytes32 externalTx)",
@@ -46,12 +47,13 @@ const POLICY = ["raffle", "hold", "burn"];
 export const TARGETS = {
   1: { name: "Ethereum", currency: "ETH", opensea: "ethereum", rpcEnv: "ETHEREUM_RPC", rpc: "https://ethereum-rpc.publicnode.com", gasReserve: 1_000_000_000_000_000n },
   8453: { name: "Base", currency: "ETH", opensea: "base", rpcEnv: "BASE_RPC", rpc: "https://base-rpc.publicnode.com", gasReserve: 50_000_000_000_000n },
-  56: { name: "BNB", currency: "BNB", opensea: "bsc", rpcEnv: "BNB_RPC", rpc: "https://bsc-rpc.publicnode.com", gasReserve: 2_000_000_000_000_000n },
+  999: { name: "Hyperliquid", currency: "HYPE", opensea: "hyperevm", rpcEnv: "HYPEREVM_RPC", rpc: "https://rpc.hyperliquid.xyz/evm", gasReserve: 50_000_000_000_000_000n },
+  [relay.SOLANA_CHAIN_ID]: { name: "Solana", currency: "SOL", solana: true, gasReserve: 10_000_000n },
 };
 
 export class ExternalKeeper {
   /**
-   * deps: { cfg, client (Robinhood public), account, send(label, req), opensea,
+   * deps: { cfg, client (Robinhood public), account, send(label, req), opensea, magiceden, solana,
    *         collections: [{chainId,address,name,slug}], bridge (optional override for tests),
    *         targetClients (optional override: chainId -> { public, wallet }) }
    */
@@ -77,6 +79,7 @@ export class ExternalKeeper {
   meta(chainId, collection32) {
     return this.collections.find((c) => {
       if (Number(c.chainId) !== chainId) return false;
+      if (TARGETS[chainId]?.solana) return this.solana?.toBytes32(c.address) === collection32.toLowerCase();
       return `0x${collection32.slice(-40)}`.toLowerCase() === c.address.toLowerCase();
     });
   }
@@ -98,11 +101,17 @@ export class ExternalKeeper {
   /** Cheapest listing on the target chain, with its ETH cost including bridge fees. */
   async floor(l, meta) {
     const t = TARGETS[l.chainId];
-    const [listing] = await this.opensea.forChain(t.opensea).bestListings(meta.address);
+    let listing;
+    if (t.solana) {
+      [listing] = await this.magiceden.bestListings(meta.slug);
+      if (listing) listing.tokenId = BigInt(this.solana.toBytes32(listing.mint));
+    } else {
+      [listing] = await this.opensea.forChain(t.opensea).bestListings(meta.address);
+    }
     if (!listing) return null;
     const needed = listing.price + t.gasReserve;
     let ethCost = needed;
-    if (t.currency !== "ETH") {
+    if (t.currency !== "ETH" || t.solana) {
       const q = await this.bridgeQuote(l.chainId, needed, "EXACT_OUTPUT");
       ethCost = q.amountIn;
     } else {
@@ -111,11 +120,15 @@ export class ExternalKeeper {
     return { listing, needed, ethCost };
   }
 
+  recipient(chainId) {
+    return TARGETS[chainId].solana ? this.solana.address : this.account.address;
+  }
+
   bridgeQuote(chainId, amount, tradeType) {
     if (this.bridge) return this.bridge.quote(chainId, amount, tradeType);
     return relay.quote({
       originChainId: this.cfg.chainId, destinationChainId: chainId,
-      user: this.account.address, recipient: this.account.address, amount, tradeType,
+      user: this.account.address, recipient: this.recipient(chainId), amount, tradeType,
     });
   }
 
@@ -127,6 +140,7 @@ export class ExternalKeeper {
   }
 
   async targetBalance(chainId) {
+    if (TARGETS[chainId].solana) return this.solana.balance();
     return this.target(chainId).public.getBalance({ address: this.account.address });
   }
 
@@ -177,27 +191,35 @@ export class ExternalKeeper {
   async buy(l, { listing, ethCost }) {
     const t = TARGETS[l.chainId];
     let txId;
-    const { public: pub, wallet } = this.target(l.chainId);
-    const tx = await this.opensea.forChain(t.opensea).fulfillment(listing, this.account.address);
-    if (tx.value !== listing.price) throw new Error(`fulfillment value ${tx.value} != listing ${listing.price}`);
-    await pub.call({ account: this.account, to: tx.to, data: tx.data, value: tx.value }); // simulate
-    if (this.cfg.dryRun) return log(`[dry-run] buy ${listing.tokenId} on ${t.name}`);
-    const hash = await wallet.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
-    const rc = await pub.waitForTransactionReceipt({ hash });
-    if (rc.status !== "success") throw new Error(`buy reverted on ${t.name}: ${hash}`);
-    txId = hash;
-    log(`#${l.id} bought ${listing.tokenId} on ${t.name} ✓ ${hash}`);
-    if (l.policy === "burn") {
-      const h = await wallet.writeContract({ address: listing.token, abi: erc721, functionName: "transferFrom", args: [this.account.address, DEAD, listing.tokenId] });
-      await pub.waitForTransactionReceipt({ hash: h });
-      log(`#${l.id} burned ${listing.tokenId} ✓ ${h}`);
+    if (t.solana) {
+      txId = await this.solana.buy(listing, this.magiceden, this.cfg.dryRun);
+      if (!txId) return;
+      if (l.policy === "burn") await this.solana.burn(listing.mint, this.cfg.dryRun);
+    } else {
+      const { public: pub, wallet } = this.target(l.chainId);
+      const tx = await this.opensea.forChain(t.opensea).fulfillment(listing, this.account.address);
+      if (tx.value !== listing.price) throw new Error(`fulfillment value ${tx.value} != listing ${listing.price}`);
+      await pub.call({ account: this.account, to: tx.to, data: tx.data, value: tx.value }); // simulate
+      if (this.cfg.dryRun) return log(`[dry-run] buy ${listing.tokenId} on ${t.name}`);
+      const hash = await wallet.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
+      const rc = await pub.waitForTransactionReceipt({ hash });
+      if (rc.status !== "success") throw new Error(`buy reverted on ${t.name}: ${hash}`);
+      txId = hash;
+      log(`#${l.id} bought ${listing.tokenId} on ${t.name} ✓ ${hash}`);
+      if (l.policy === "burn") {
+        const h = await wallet.writeContract({ address: listing.token, abi: erc721, functionName: "transferFrom", args: [this.account.address, DEAD, listing.tokenId] });
+        await pub.waitForTransactionReceipt({ hash: h });
+        log(`#${l.id} burned ${listing.tokenId} ✓ ${h}`);
+      }
+      if (!this.nftContracts) this.nftContracts = {};
+      this.nftContracts[l.vault] = listing.token;
     }
-    if (!this.nftContracts) this.nftContracts = {};
-    this.nftContracts[l.vault] = listing.token;
-    const price = t.currency === "ETH" ? listing.price : ethCost;
+    const ref = t.solana ? keccak256(toHex(txId)) : txId;
+    const price = t.currency === "ETH" && !t.solana ? listing.price : ethCost;
     await this.send(`#${l.id} recordPurchase ${listing.tokenId}`, {
-      address: l.vault, abi: extVaultAbi, functionName: "recordPurchase", args: [listing.tokenId, price, txId],
+      address: l.vault, abi: extVaultAbi, functionName: "recordPurchase", args: [listing.tokenId, price, ref],
     });
+    if (t.solana) this.receipts?.(l, listing.tokenId, txId);
   }
 
   async deliverPrizes(l) {
@@ -209,13 +231,21 @@ export class ExternalKeeper {
       const owed = await this.client.readContract({ address: l.vault, abi: extVaultAbi, functionName: "prizeOwedTo", args: [tokenId] });
       if (owed === "0x0000000000000000000000000000000000000000") continue; // already delivered
       let txId;
-      const { public: pub, wallet } = this.target(l.chainId);
-      const nft = getAddress(meta.address);
-      await pub.simulateContract({ account: this.account, address: nft, abi: erc721, functionName: "safeTransferFrom", args: [this.account.address, owed, tokenId] });
-      if (this.cfg.dryRun) { log(`[dry-run] deliver ${tokenId} → ${owed} on ${t.name}`); continue; }
-      txId = await wallet.writeContract({ address: nft, abi: erc721, functionName: "safeTransferFrom", args: [this.account.address, owed, tokenId] });
-      await pub.waitForTransactionReceipt({ hash: txId });
-      log(`#${l.id} delivered ${tokenId} to ${owed} on ${t.name} ✓ ${txId}`);
+      if (t.solana) {
+        const dest = await this.client.readContract({ address: l.vault, abi: extVaultAbi, functionName: "prizeDestination", args: [tokenId] });
+        if (/^0x0+$/.test(dest)) continue; // winner has not saved a Solana address yet
+        txId = await this.solana.transfer(toHex(tokenId, { size: 32 }), dest, this.cfg.dryRun);
+        if (!txId) continue;
+        txId = keccak256(toHex(txId));
+      } else {
+        const { public: pub, wallet } = this.target(l.chainId);
+        const nft = getAddress(meta.address);
+        await pub.simulateContract({ account: this.account, address: nft, abi: erc721, functionName: "safeTransferFrom", args: [this.account.address, owed, tokenId] });
+        if (this.cfg.dryRun) { log(`[dry-run] deliver ${tokenId} → ${owed} on ${t.name}`); continue; }
+        txId = await wallet.writeContract({ address: nft, abi: erc721, functionName: "safeTransferFrom", args: [this.account.address, owed, tokenId] });
+        await pub.waitForTransactionReceipt({ hash: txId });
+        log(`#${l.id} delivered ${tokenId} to ${owed} on ${t.name} ✓ ${txId}`);
+      }
       await this.send(`#${l.id} markDelivered ${tokenId}`, { address: l.vault, abi: extVaultAbi, functionName: "markDelivered", args: [tokenId, txId] });
     }
   }

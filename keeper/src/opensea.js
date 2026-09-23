@@ -1,7 +1,7 @@
 import { parseAbiItem, encodeFunctionData, getAddress } from "viem";
 
 const BASE = "https://api.opensea.io/api/v2";
-const NATIVE = ["ETH", "BNB"]; // listings priced in the chain's native currency
+const NATIVE = ["ETH", "HYPE"]; // listings priced in the chain's native currency
 
 export class RateLimited extends Error {
   constructor(until) {
@@ -53,7 +53,7 @@ export class OpenSea {
     return res.json();
   }
 
-  /** Same key and rate-limit state, different chain (e.g. "ethereum", "base", "bsc"). */
+  /** Same key and rate-limit state, different chain (e.g. "ethereum", "base", "hyperevm"). */
   forChain(chain) {
     if (chain === this.chain) return this;
     this.children ||= new Map();

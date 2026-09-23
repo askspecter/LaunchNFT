@@ -12,7 +12,9 @@ const CHAINS = {
   ethereum: { id: 1, rpc: "https://ethereum-rpc.publicnode.com" },
   base: { id: 8453, rpc: "https://base-rpc.publicnode.com" },
   robinhood: { id: 4663, rpc: "https://rpc.mainnet.chain.robinhood.com" },
+  hyperevm: { id: 999, rpc: "https://rpc.hyperliquid.xyz/evm" },
 };
+const SOLANA_ID = 792703809;
 const PER_CHAIN = Number(process.env.PER_CHAIN || 200); // collections examined per chain
 const MIN_SALES_7D = Number(process.env.MIN_SALES_7D || 5);
 
@@ -75,6 +77,42 @@ for (const [chain, cfg] of Object.entries(CHAINS)) {
   rows.sort((a, b) => b.volume7d - a.volume7d);
   out.chains[chain] = rows;
   console.log(`${chain}: ${rows.length} active, ${rows.filter((r) => r.erc721).length} ERC-721`);
+}
+
+// Solana: Magic Eden's public popular-collections and stats endpoints (no key needed to read).
+async function me(path) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await fetch(`https://api-mainnet.magiceden.dev/v2${path}`, { headers: { accept: "application/json" } });
+    if (res.status === 429) { await sleep(2 ** attempt * 1000); continue; }
+    if (!res.ok) throw new Error(`Magic Eden ${res.status} ${path}`);
+    await sleep(600); // public rate limit is ~2 req/s
+    return res.json();
+  }
+  throw new Error(`Magic Eden kept rate limiting ${path}`);
+}
+try {
+  const popular = [
+    ...(await me("/marketplace/popular_collections?timeRange=7d&limit=100")),
+    ...(await me("/marketplace/popular_collections?timeRange=30d&limit=100")),
+  ];
+  const bySymbol = new Map(popular.map((c) => [c.symbol, c]));
+  const rows = [];
+  for (const c of bySymbol.values()) {
+    let stats;
+    try { stats = await me(`/collections/${encodeURIComponent(c.symbol)}/stats`); } catch { continue; }
+    const floor = (stats.floorPrice ?? c.floorPrice ?? 0) / 1e9;
+    if (!floor) continue;
+    rows.push({
+      chainId: SOLANA_ID, chain: "solana", slug: c.symbol, name: c.name, address: c.symbol, image: c.image || null,
+      verified: true, floor, floorSymbol: "SOL", volume7d: (c.volumeAll ?? 0) / 1e9, sales7d: null,
+      listed: stats.listedCount ?? null, erc721: false,
+    });
+  }
+  rows.sort((a, b) => b.floor - a.floor);
+  out.chains.solana = rows;
+  console.log(`solana: ${rows.length} popular collections`);
+} catch (e) {
+  console.warn("solana scan failed:", e.message);
 }
 
 await mkdir("../data", { recursive: true });

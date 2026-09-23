@@ -137,6 +137,8 @@ function renderSummary() {
     state.collection && state.collection.chainId !== ROBINHOOD
       ? `This collection is on ${esc(state.collection.chain)}. The keeper moves the vault's ETH there to buy: every withdrawal is announced 1 hour ahead and can be cancelled, and each purchase is recorded on Robinhood Chain.`
       : "The collection and the NFT rule are permanent. The vault has no withdraw function.",
+    state.collection && state.collection.chainId !== ROBINHOOD && !CONFIG.chains[state.collection.chainId]?.evm
+      ? "Raffle winners on Solana enter their Solana address on the Claims page to receive the NFT." : "",
     state.pons ? `Once ${eth(state.pons.graduation, 2)} ETH is in the curve, the coin moves to a locked Uniswap v4 pool, and fees keep flowing the same way.` : "",
     s ? `With ${(Number(taxBps()) / 100).toFixed(2)}% tax, every 1 ETH of trading sends about ${eth(s.vault, 4)} ETH to the vault.` : "",
   ].filter(Boolean).map((t) => `<li>${t}</li>`).join("");
@@ -246,7 +248,7 @@ $("#launchBtn").addEventListener("click", async (e) => {
       policy: policy(),
     };
     const args = [external
-      ? { ...base, chainId: BigInt(state.collection.chainId), collection: collectionId(state.collection.chainId, state.collection.address), isEvm: true }
+      ? { ...base, chainId: BigInt(state.collection.chainId), collection: collectionId(state.collection.chainId, state.collection.address), isEvm: !!CONFIG.chains[state.collection.chainId]?.evm }
       : { ...base, collection: state.collection.address }];
     const target = external ? CONFIG.externalLauncher : CONFIG.launcher;
     const abi = external ? ABI.extLauncher : ABI.launcher;
