@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IPonsFactory} from "../src/interfaces/IPons.sol";
 
@@ -49,11 +50,23 @@ contract MockEscrow {
     }
 }
 
+contract MockToken is ERC20 {
+    constructor(string memory n, string memory s) ERC20(n, s) {
+        _mint(msg.sender, 1_000_000_000 ether);
+    }
+}
+
+/// @dev Deploys a real ERC20 (supply held by this contract, standing in for the curve).
 contract MockPons {
     MockEscrow public immutable escrow = new MockEscrow();
     uint256 public constant launchFee = 0.0005 ether;
     address public lastRecipient;
     uint16 public lastTax;
+
+    /// @dev Simulates a buy on the curve.
+    function give(address token, address to, uint256 amount) external {
+        MockToken(token).transfer(to, amount);
+    }
 
     function feeEscrow() external view returns (address) {
         return address(escrow);
@@ -67,8 +80,8 @@ contract MockPons {
         require(msg.value == launchFee && pairToken == address(0), "mock launch");
         lastRecipient = params.creatorFeeRecipient;
         lastTax = params.creatorTaxBps;
-        token = address(uint160(uint256(keccak256(abi.encode(params.symbol, block.number)))));
-        curve = address(uint160(token) + 1);
+        token = address(new MockToken(params.name, params.symbol));
+        curve = address(this);
     }
 }
 
