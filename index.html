@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LaunchNFT — coins that collect NFTs</title>
+  <meta name="description" content="Launch a coin tied to an NFT collection. Trading fees flow into an on-chain vault that can only buy floor NFTs from that collection." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="nav">
+    <a href="#" class="brand">launch<span>nft</span><i>.</i></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#launches">Explore</a>
+      <a href="#how">How it works</a>
+      <a href="#rules">Rules</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="btn btn-ghost" id="connectBtn">Connect</button>
+      <button class="btn btn-dark" data-open-launch>Launch</button>
+      <button class="burger" id="burger" aria-label="Menu">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="pill"><span class="dot"></span> Live on testnet</div>
+      <h1>Every trade of your coin<br /><em>collects NFTs</em> for its holders</h1>
+      <p class="lead">Tie a coin to any NFT collection. A share of every trading fee is locked in a vault that is only allowed to buy floor pieces from that collection, then hands them back to the community.</p>
+      <div class="cta">
+        <button class="btn btn-dark btn-lg" data-open-launch>Launch a coin</button>
+        <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
+      </div>
+      <div class="stats">
+        <div><b id="statCoins">0</b><span>coins launched</span></div>
+        <div><b id="statNfts">0</b><span>NFTs collected</span></div>
+        <div><b id="statVault">0</b><span>ETH in vaults</span></div>
+      </div>
+    </section>
+
+    <section class="marquee" id="rules" aria-label="Vault rules">
+      <div class="track" id="track"></div>
+    </section>
+
+    <section class="section" id="how">
+      <h2>Three steps, no trust required</h2>
+      <div class="steps">
+        <article class="card">
+          <span class="num">01</span>
+          <h3>Pick a collection</h3>
+          <p>Choose the NFT collection your coin will accumulate. The pairing is written into the contract and can never be changed.</p>
+        </article>
+        <article class="card">
+          <span class="num">02</span>
+          <h3>Fees fill the vault</h3>
+          <p>75% of creator fees go to the collection vault, 25% to the protocol. Anyone can trigger a harvest — no admin keys.</p>
+        </article>
+        <article class="card">
+          <span class="num">03</span>
+          <h3>Floors get swept</h3>
+          <p>The vault buys the cheapest listed pieces under a price ceiling, then distributes them to holders by verifiable random draw.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="launches">
+      <div class="row-head">
+        <h2>Recent launches</h2>
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-sort="new">New</button>
+          <button class="tab" data-sort="vault">Top vault</button>
+          <button class="tab" data-sort="nfts">Most NFTs</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section class="section" id="faq">
+      <h2>Questions</h2>
+      <div class="faq">
+        <details><summary>Can the creator withdraw from the vault?</summary><p>No. The vault contract has no withdraw function. Funds can only leave as payment for NFTs from the paired collection.</p></details>
+        <details><summary>Who decides the purchase price?</summary><p>A keeper posts a price ceiling based on recent floor data. The vault refuses any buy above that ceiling, and ceilings expire after one hour.</p></details>
+        <details><summary>What happens to the NFTs?</summary><p>At launch, the creator picks a policy: raffle to holders, hold forever, or burn. The policy is locked once the coin is live.</p></details>
+        <details><summary>Is this audited?</summary><p>This is a demo interface. Do not deposit real funds until contracts are audited and deployed to mainnet.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div>
+      <a href="#" class="brand">launch<span>nft</span><i>.</i></a>
+      <p>Coins whose fees buy NFT floors. Vault rules are enforced on-chain.</p>
+    </div>
+    <div class="foot-links">
+      <a href="#launches">Explore</a>
+      <a href="#how">How it works</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <small>© <span id="year"></span> LaunchNFT. Demo interface — not financial advice.</small>
+  </footer>
+
+  <dialog id="launchDialog">
+    <form method="dialog" id="launchForm">
+      <div class="dlg-head">
+        <h3>Launch a coin</h3>
+        <button value="cancel" class="x" aria-label="Close">✕</button>
+      </div>
+      <label>Coin name<input name="name" required maxlength="32" placeholder="Floor Muncher" /></label>
+      <label>Ticker<input name="ticker" required maxlength="8" placeholder="MUNCH" /></label>
+      <label>NFT collection address<input name="collection" required pattern="^0x[a-fA-F0-9]{40}$" placeholder="0x…" /></label>
+      <label>NFT policy
+        <select name="policy">
+          <option value="raffle">Raffle to holders</option>
+          <option value="hold">Hold in vault</option>
+          <option value="burn">Burn</option>
+        </select>
+      </label>
+      <p class="hint">The collection and policy cannot be changed after launch.</p>
+      <button class="btn btn-dark btn-lg full" value="submit">Launch</button>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
