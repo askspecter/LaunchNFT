@@ -78,7 +78,16 @@ DRY_RUN=1 npm run once   # simulasi saja, cek log-nya
 npm start                # jalan terus
 ```
 
-Jalankan di server yang selalu hidup (VPS dengan pm2/systemd, Railway, Fly.io, dll.). Contoh pm2:
+Keeper **tidak bisa** dijalankan di Vercel: Vercel hanya menjalankan fungsi pendek, sedangkan keeper harus hidup terus dan menyimpan file snapshot.
+
+### Opsi A: Railway (paling mirip Vercel, tanpa server sendiri)
+1. railway.com → New Project → Deploy from GitHub repo → pilih repo ini.
+2. Settings → **Root Directory** = `keeper`. Start command otomatis `npm start`.
+3. Tab **Variables**: isi `KEEPER_PRIVATE_KEY`, `LAUNCHER`, `START_BLOCK`, `OPENSEA_API_KEY`, `SNAPSHOT_DIR=/data/snapshots`. `PORT` diisi otomatis oleh Railway.
+4. Tambah **Volume** dengan mount path `/data`, supaya snapshot tidak hilang saat restart.
+5. Settings → Networking → **Generate Domain**. Ini URL untuk `snapshotBaseUrl` (tambahkan `/` di akhir). Cek `https://<domain>/health` → `ok`.
+
+### Opsi B: VPS sendiri (pm2/systemd)
 
 ```sh
 npm i -g pm2 && pm2 start src/index.js --name launchnft-keeper && pm2 save

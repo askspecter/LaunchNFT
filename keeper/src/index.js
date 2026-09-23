@@ -26,6 +26,16 @@ async function chainNow() {
   return (await client.getBlock()).timestamp;
 }
 
+/** Waits until the chain (ArbSys) block number reaches `n`, up to ~2 minutes. */
+async function waitForChainBlock(n) {
+  for (let i = 0; i < 240; i++) {
+    const current = await client.readContract({ address: ARB_SYS, abi: arbSysAbi, functionName: "arbBlockNumber" });
+    if (current >= n) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`chain did not reach block ${n}`);
+}
+
 /** Simulate first so a bad call costs nothing, then send and wait. */
 async function send(label, req) {
   const { request } = await client.simulateContract({ account, ...req });
@@ -155,14 +165,19 @@ async function progressRaffles(l) {
     });
     if (claimed) continue;
 
-    if (!drawn && drawBlock === 0n && now >= publishedAt + delay) {
-      await send(`#${l.id} raffle ${id} commitDraw`, { address: l.vault, abi: vaultAbi, functionName: "commitDraw", args: [id] });
-      continue;
-    }
-    if (!drawn && drawBlock !== 0n) {
-      const current = await client.readContract({ address: ARB_SYS, abi: arbSysAbi, functionName: "arbBlockNumber" });
-      if (current > drawBlock) await send(`#${l.id} raffle ${id} draw`, { address: l.vault, abi: vaultAbi, functionName: "draw", args: [id] });
-      continue;
+    if (!drawn) {
+      // The pinned block's hash is readable for only 256 chain blocks (~25s on Robinhood
+      // Chain), so commit and draw happen in the same pass instead of across ticks.
+      let target = drawBlock;
+      if (target === 0n) {
+        if (now < publishedAt + delay) continue;
+        await send(`#${l.id} raffle ${id} commitDraw`, { address: l.vault, abi: vaultAbi, functionName: "commitDraw", args: [id] });
+        if (cfg.dryRun) continue;
+        [, , , , target] = await client.readContract({ address: l.vault, abi: vaultAbi, functionName: "raffles", args: [id] });
+      }
+      await waitForChainBlock(target + 1n);
+      await send(`#${l.id} raffle ${id} draw`, { address: l.vault, abi: vaultAbi, functionName: "draw", args: [id] });
+      continue; // deliver next pass (or immediately below on the following tick)
     }
     if (drawn) {
       // Delivery is permissionless: the keeper claims on the winner's behalf.

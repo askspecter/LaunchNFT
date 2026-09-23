@@ -14,7 +14,7 @@ SELLER_KEY=0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a
 ALICE=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 BOB=0x90F79bf6EB2c4f870365E785982E1f101E93b906
 
-anvil --silent --port 8545 & ANVIL=$!
+anvil --silent --port 8545 --block-time 1 & ANVIL=$!
 trap 'kill $ANVIL' EXIT
 sleep 1
 
@@ -54,9 +54,7 @@ check "$(cast call $VAULT 'raffleCount()(uint256)' --rpc-url $RPC)" "1" "raffle 
 
 # 4. After the 15 min delay: commit, then draw, then deliver.
 cast rpc evm_increaseTime 901 --rpc-url $RPC >/dev/null; cast rpc evm_mine --rpc-url $RPC >/dev/null
-keeper                                      # commitDraw
-cast rpc anvil_mine 25 --rpc-url $RPC >/dev/null
-keeper                                      # draw
+keeper                                      # commitDraw + wait + draw in one pass
 keeper                                      # deliver to winner
 WINNER=$(cast call $NFT 'ownerOf(uint256)(address)' 42 --rpc-url $RPC)
 if [ "$WINNER" = "$ALICE" ] || [ "$WINNER" = "$BOB" ]; then echo "ok: NFT 42 delivered to holder $WINNER"; else echo "FAIL: owner $WINNER"; exit 1; fi
