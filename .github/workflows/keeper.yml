@@ -4,7 +4,7 @@
 #   Settings → Secrets and variables → Actions
 #     Secrets:   KEEPER_PRIVATE_KEY  (dedicated keeper wallet, gas money only)
 #                OPENSEA_API_KEY     (optional; empty = auto free-tier key)
-#     Variables: LAUNCHER, START_BLOCK  (from admin.html after deploying)
+#     Variables (optional): LAUNCHER, START_BLOCK — default to the mainnet deployment below
 #   Optional variables: MAX_CEILING_ETH, CEILING_MARKUP_BPS, MIN_HARVEST_ETH, DRY_RUN
 #
 # Raffle snapshots are committed to snapshots/, which Vercel serves with the site.
@@ -13,7 +13,12 @@ name: keeper
 on:
   schedule:
     - cron: "*/30 * * * *" # every 30 min; GitHub may delay scheduled runs
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Simulate only (send no transactions)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -24,7 +29,6 @@ concurrency:
 
 jobs:
   run:
-    if: vars.LAUNCHER != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,12 +49,13 @@ jobs:
         env:
           KEEPER_PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}
           OPENSEA_API_KEY: ${{ secrets.OPENSEA_API_KEY }}
-          LAUNCHER: ${{ vars.LAUNCHER }}
-          START_BLOCK: ${{ vars.START_BLOCK }}
+          # Mainnet deployment; repo variables override these.
+          LAUNCHER: ${{ vars.LAUNCHER || '0x4fbac0fe4ba373ea7c34661cb1b9934b6f4c5a37' }}
+          START_BLOCK: ${{ vars.START_BLOCK || '70558619' }}
           MAX_CEILING_ETH: ${{ vars.MAX_CEILING_ETH || '0.5' }}
           CEILING_MARKUP_BPS: ${{ vars.CEILING_MARKUP_BPS || '300' }}
           MIN_HARVEST_ETH: ${{ vars.MIN_HARVEST_ETH || '0.005' }}
-          DRY_RUN: ${{ vars.DRY_RUN || '0' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || vars.DRY_RUN || '0' }}
           SNAPSHOT_DIR: ../snapshots
         run: node src/index.js --once
 
