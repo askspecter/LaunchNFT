@@ -10,3 +10,6 @@ remappings = [
   "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
   "forge-std/=node_modules/forge-std/src/",
 ]
+
+[rpc_endpoints]
+robinhood = "https://rpc.mainnet.chain.robinhood.com"

@@ -2,42 +2,13 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {Registry} from "../src/Registry.sol";
-import {LaunchFactory} from "../src/LaunchFactory.sol";
-import {LaunchToken} from "../src/LaunchToken.sol";
-import {CurveMarket} from "../src/CurveMarket.sol";
-import {FeeSplitter} from "../src/FeeSplitter.sol";
+import {Launcher} from "../src/Launcher.sol";
+import {FeeRouter} from "../src/FeeRouter.sol";
 import {SweepVault} from "../src/SweepVault.sol";
-
-contract MockNFT is ERC721("Mock", "MOCK") {
-    function mint(address to, uint256 id) external {
-        _mint(to, id);
-    }
-}
-
-/// @dev Minimal marketplace: sellers escrow an NFT at a fixed price, buyers pay exactly that.
-contract MockMarket {
-    struct Listing { address seller; uint256 price; }
-    IERC721 public immutable nft;
-    mapping(uint256 => Listing) public listings;
-
-    constructor(IERC721 nft_) { nft = nft_; }
-
-    function list(uint256 id, uint256 price) external {
-        nft.transferFrom(msg.sender, address(this), id);
-        listings[id] = Listing(msg.sender, price);
-    }
-
-    function fill(uint256 id) external payable {
-        Listing memory l = listings[id];
-        require(msg.value == l.price, "price");
-        delete listings[id];
-        nft.transferFrom(address(this), msg.sender, id);
-        payable(l.seller).transfer(msg.value);
-    }
-}
+import {IPonsFactory} from "../src/interfaces/IPons.sol";
+import {MockNFT, MockMarket, MockEscrow, MockPons} from "./Mocks.sol";
 
 contract LaunchNFTTest is Test {
     address owner = makeAddr("owner");
@@ -48,27 +19,45 @@ contract LaunchNFTTest is Test {
     address seller = makeAddr("seller");
 
     Registry registry;
-    LaunchFactory factory;
+    MockPons pons;
+    Launcher launcher;
     MockNFT nft;
     MockMarket market;
 
     function setUp() public {
         registry = new Registry(owner, keeper, treasury);
-        factory = new LaunchFactory(registry);
+        pons = new MockPons();
+        launcher = new Launcher(IPonsFactory(address(pons)), registry);
         nft = new MockNFT();
         market = new MockMarket(nft);
-        vm.prank(owner);
+        vm.startPrank(owner);
         registry.setMarketplace(address(market), true);
+        registry.setCollection(address(nft), true);
+        vm.stopPrank();
+        vm.deal(creator, 1 ether);
     }
 
-    function _launch(SweepVault.Policy policy)
-        internal
-        returns (LaunchToken token, CurveMarket curve, FeeSplitter splitter, SweepVault vault)
-    {
+    function _params(SweepVault.Policy policy) internal view returns (Launcher.LaunchParams memory p) {
+        p.name = "Floor Muncher";
+        p.symbol = "MUNCH";
+        p.creatorTaxBps = 100;
+        p.collection = nft;
+        p.policy = policy;
+    }
+
+    function _launch(SweepVault.Policy policy) internal returns (FeeRouter router, SweepVault vault) {
+        uint256 fee = pons.launchFee();
         vm.prank(creator);
-        uint256 id = factory.launch("Floor Muncher", "MUNCH", nft, policy);
-        (address t, address m, address s, address v,,) = factory.launches(id);
-        return (LaunchToken(t), CurveMarket(m), FeeSplitter(payable(s)), SweepVault(payable(v)));
+        uint256 id = launcher.launch{value: fee}(_params(policy));
+        (,, address r, address v,,) = launcher.launches(id);
+        return (FeeRouter(payable(r)), SweepVault(payable(v)));
+    }
+
+    function _fund(FeeRouter router, uint256 fees) internal {
+        MockEscrow escrow = pons.escrow();
+        vm.deal(address(this), fees);
+        escrow.credit{value: fees}(address(router));
+        router.harvest();
     }
 
     function _list(uint256 id, uint256 price) internal {
@@ -79,74 +68,56 @@ contract LaunchNFTTest is Test {
         vm.stopPrank();
     }
 
-    function _fundVault(CurveMarket curve, FeeSplitter splitter, uint256 volume) internal {
-        vm.deal(alice, volume);
-        vm.prank(alice);
-        curve.buy{value: volume}(0);
-        splitter.harvest();
-    }
-
-    function test_launchWiresEverything() public {
-        (LaunchToken token, CurveMarket curve,, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
-        assertEq(token.balanceOf(address(curve)), factory.SUPPLY());
-        assertEq(address(vault.collection()), address(nft));
-        assertEq(uint8(vault.policy()), uint8(SweepVault.Policy.Raffle));
-        assertEq(factory.launchCount(), 1);
-    }
-
-    function test_launchRejectsNonNft() public {
-        vm.expectRevert();
-        factory.launch("X", "X", IERC721(address(registry)), SweepVault.Policy.Hold);
-    }
-
-    function test_buySellAndFeeSplit() public {
-        (LaunchToken token, CurveMarket curve, FeeSplitter splitter, SweepVault vault) = _launch(SweepVault.Policy.Hold);
-        vm.deal(alice, 10 ether);
-
-        vm.prank(alice);
-        uint256 got = curve.buy{value: 10 ether}(0);
-        assertGt(got, 0);
-        assertEq(address(splitter).balance, 0.1 ether);
-
-        vm.startPrank(alice);
-        token.approve(address(curve), got);
-        uint256 back = curve.sell(got, 0);
+    function _buy(SweepVault vault, uint256 id, uint256 price) internal {
+        vm.startPrank(keeper);
+        vault.postCeiling(price);
+        vault.buy(address(market), abi.encodeCall(MockMarket.fill, (id)), id, price);
         vm.stopPrank();
-        assertLt(back, 10 ether);
-        assertLe(curve.ethReserve(), 1); // everything paid back except rounding dust
-
-        uint256 fees = address(splitter).balance;
-        splitter.harvest();
-        assertEq(address(vault).balance, fees * 8_000 / 10_000);
-        assertEq(treasury.balance, fees - fees * 8_000 / 10_000);
     }
 
-    function test_buySlippage() public {
-        (, CurveMarket curve,,) = _launch(SweepVault.Policy.Hold);
-        vm.deal(alice, 1 ether);
-        vm.prank(alice);
-        vm.expectRevert("slippage");
-        curve.buy{value: 1 ether}(type(uint256).max);
+    function test_launchRegistersRouterWithPons() public {
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
+        assertEq(pons.lastRecipient(), address(router));
+        assertEq(pons.lastTax(), 100);
+        assertEq(router.vault(), address(vault));
+        assertEq(address(vault.collection()), address(nft));
+        (,,,,, address c) = launcher.launches(0);
+        assertEq(c, creator);
+    }
+
+    function test_launchRequiresListedCollectionAndExactFee() public {
+        Launcher.LaunchParams memory p = _params(SweepVault.Policy.Hold);
+        p.collection = IERC721(address(new MockNFT()));
+        vm.prank(creator);
+        vm.expectRevert("collection not listed");
+        launcher.launch{value: 0.0005 ether}(p);
+
+        vm.prank(creator);
+        vm.expectRevert("wrong launch fee");
+        launcher.launch{value: 0.001 ether}(_params(SweepVault.Policy.Hold));
+    }
+
+    function test_harvestSplits80_20() public {
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Hold);
+        _fund(router, 1 ether);
+        assertEq(address(vault).balance, 0.8 ether);
+        assertEq(treasury.balance, 0.2 ether);
+        assertEq(router.pending(), 0);
     }
 
     function test_vaultBuysUnderCeiling() public {
-        (, CurveMarket curve, FeeSplitter splitter, SweepVault vault) = _launch(SweepVault.Policy.Hold);
-        _fundVault(curve, splitter, 100 ether); // 1 ETH fee -> 0.8 ETH vault
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Hold);
+        _fund(router, 1 ether);
         _list(7, 0.5 ether);
-
-        vm.startPrank(keeper);
-        vault.postCeiling(0.6 ether);
-        vault.buy(address(market), abi.encodeCall(MockMarket.fill, (7)), 7, 0.5 ether);
-        vm.stopPrank();
-
+        _buy(vault, 7, 0.5 ether);
         assertEq(nft.ownerOf(7), address(vault));
         assertEq(address(vault).balance, 0.3 ether);
         assertEq(seller.balance, 0.5 ether);
     }
 
     function test_vaultRejectsAboveCeilingExpiredOrUnlisted() public {
-        (, CurveMarket curve, FeeSplitter splitter, SweepVault vault) = _launch(SweepVault.Policy.Hold);
-        _fundVault(curve, splitter, 100 ether);
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Hold);
+        _fund(router, 1 ether);
         _list(1, 0.5 ether);
         bytes memory data = abi.encodeCall(MockMarket.fill, (1));
 
@@ -170,19 +141,15 @@ contract LaunchNFTTest is Test {
     }
 
     function test_burnPolicy() public {
-        (, CurveMarket curve, FeeSplitter splitter, SweepVault vault) = _launch(SweepVault.Policy.Burn);
-        _fundVault(curve, splitter, 100 ether);
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Burn);
+        _fund(router, 1 ether);
         _list(3, 0.5 ether);
-
-        vm.startPrank(keeper);
-        vault.postCeiling(1 ether);
-        vault.buy(address(market), abi.encodeCall(MockMarket.fill, (3)), 3, 0.5 ether);
-        vm.stopPrank();
+        _buy(vault, 3, 0.5 ether);
         assertEq(nft.ownerOf(3), vault.BURN_ADDRESS());
     }
 
     function test_rejectsOtherCollections() public {
-        (,,, SweepVault vault) = _launch(SweepVault.Policy.Hold);
+        (, SweepVault vault) = _launch(SweepVault.Policy.Hold);
         MockNFT other = new MockNFT();
         other.mint(alice, 1);
         vm.prank(alice);
@@ -191,20 +158,18 @@ contract LaunchNFTTest is Test {
     }
 
     function test_raffleFlow() public {
-        (, CurveMarket curve, FeeSplitter splitter, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
-        _fundVault(curve, splitter, 100 ether);
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
+        _fund(router, 1 ether);
         _list(9, 0.5 ether);
-        vm.startPrank(keeper);
-        vault.postCeiling(1 ether);
-        vault.buy(address(market), abi.encodeCall(MockMarket.fill, (9)), 9, 0.5 ether);
+        _buy(vault, 9, 0.5 ether);
 
-        // Two holders: alice owns tickets [0, 60), bob owns [60, 100).
+        // alice owns tickets [0, 60), bob owns [60, 100)
         address bob = makeAddr("bob");
         bytes32 leafA = keccak256(bytes.concat(keccak256(abi.encode(alice, uint256(0), uint256(60)))));
         bytes32 leafB = keccak256(bytes.concat(keccak256(abi.encode(bob, uint256(60), uint256(100)))));
         bytes32 root = leafA < leafB ? keccak256(abi.encode(leafA, leafB)) : keccak256(abi.encode(leafB, leafA));
+        vm.prank(keeper);
         uint256 id = vault.openRaffle(9, root, 100);
-        vm.stopPrank();
 
         vm.expectRevert("too early");
         vault.draw(id);
@@ -232,14 +197,12 @@ contract LaunchNFTTest is Test {
     }
 
     function test_raffleRetargetsStaleBlock() public {
-        (, CurveMarket curve, FeeSplitter splitter, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
-        _fundVault(curve, splitter, 100 ether);
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
+        _fund(router, 1 ether);
         _list(2, 0.5 ether);
-        vm.startPrank(keeper);
-        vault.postCeiling(1 ether);
-        vault.buy(address(market), abi.encodeCall(MockMarket.fill, (2)), 2, 0.5 ether);
+        _buy(vault, 2, 0.5 ether);
+        vm.prank(keeper);
         uint256 id = vault.openRaffle(2, keccak256("root"), 10);
-        vm.stopPrank();
 
         (,,,, uint64 drawBlock,,,) = vault.raffles(id);
         vm.roll(drawBlock + 300);
@@ -250,17 +213,10 @@ contract LaunchNFTTest is Test {
         assertEq(newBlock, block.number + 5);
     }
 
-    function testFuzz_curveNeverPaysOutMoreThanReserve(uint96 ethIn, uint96 sellPart) public {
-        (LaunchToken token, CurveMarket curve,,) = _launch(SweepVault.Policy.Hold);
-        ethIn = uint96(bound(ethIn, 1e12, 1_000 ether));
-        vm.deal(alice, ethIn);
-        vm.startPrank(alice);
-        uint256 got = curve.buy{value: ethIn}(0);
-        uint256 toSell = bound(sellPart, 1, got);
-        token.approve(address(curve), toSell);
-        (uint256 quote,) = curve.quoteSell(toSell);
-        if (quote > 0) curve.sell(toSell, 0);
-        vm.stopPrank();
-        assertGe(address(curve).balance, curve.ethReserve());
+    function testFuzz_harvestSplitIsExact(uint96 fees) public {
+        (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Hold);
+        _fund(router, fees);
+        assertEq(address(vault).balance + treasury.balance, fees);
+        assertEq(address(vault).balance, uint256(fees) * 8_000 / 10_000);
     }
 }

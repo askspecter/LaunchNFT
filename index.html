@@ -28,9 +28,9 @@
 
   <main>
     <section class="hero">
-      <div class="pill"><span class="dot"></span> Live on testnet</div>
+      <div class="pill"><span class="dot"></span> Robinhood Chain · launches on Pons</div>
       <h1>Every trade of your coin<br /><em>collects NFTs</em> for its holders</h1>
-      <p class="lead">Tie a coin to any NFT collection. A share of every trading fee is locked in a vault that is only allowed to buy floor pieces from that collection, then hands them back to the community.</p>
+      <p class="lead">Launch a Pons coin tied to an NFT collection on Robinhood Chain. 80% of its creator fees is locked in a vault that is only allowed to buy floor pieces from that collection, then hands them back to the community.</p>
       <div class="cta">
         <button class="btn btn-dark btn-lg" data-open-launch>Launch a coin</button>
         <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
@@ -85,7 +85,8 @@
         <details><summary>Can the creator withdraw from the vault?</summary><p>No. The vault contract has no withdraw function. Funds can only leave as payment for NFTs from the paired collection.</p></details>
         <details><summary>Who decides the purchase price?</summary><p>A keeper posts a price ceiling based on recent floor data. The vault refuses any buy above that ceiling, and ceilings expire after one hour.</p></details>
         <details><summary>What happens to the NFTs?</summary><p>At launch, the creator picks a policy: raffle to holders, hold forever, or burn. The policy is locked once the coin is live.</p></details>
-        <details><summary>Is this audited?</summary><p>This is a demo interface. Do not deposit real funds until contracts are audited and deployed to mainnet.</p></details>
+        <details><summary>How does this use Pons?</summary><p>Each coin is a normal Pons V2 launch on Robinhood Chain. Its creator-fee recipient is a fee router contract with no way to change that recipient. Anyone can call harvest, which sweeps the curve fees, claims them from the Pons escrow and splits them 80/20.</p></details>
+        <details><summary>Is this audited?</summary><p>Not yet. The contracts are open source and tested against a fork of Robinhood Chain mainnet, but they have not had an independent audit.</p></details>
       </div>
     </section>
   </main>
@@ -100,7 +101,7 @@
       <a href="#how">How it works</a>
       <a href="#faq">FAQ</a>
     </div>
-    <small>© <span id="year"></span> LaunchNFT. Demo interface — not financial advice.</small>
+    <small>© <span id="year"></span> LaunchNFT. Not affiliated with Robinhood Markets or Pons. Not financial advice.</small>
   </footer>
 
   <dialog id="launchDialog">
@@ -111,7 +112,10 @@
       </div>
       <label>Coin name<input name="name" required maxlength="32" placeholder="Floor Muncher" /></label>
       <label>Ticker<input name="ticker" required maxlength="8" placeholder="MUNCH" /></label>
+      <label>Logo URL<input name="logo" type="url" placeholder="https://…/logo.png" /></label>
+      <label>Description<input name="description" maxlength="280" placeholder="What is this coin about?" /></label>
       <label>NFT collection address<input name="collection" required pattern="^0x[a-fA-F0-9]{40}$" placeholder="0x…" /></label>
+      <label>Creator tax (%, extra on top of Pons fee)<input name="tax" type="number" min="0" max="10" step="0.1" value="0" /></label>
       <label>NFT policy
         <select name="policy">
           <option value="raffle">Raffle to holders</option>
@@ -119,12 +123,12 @@
           <option value="burn">Burn</option>
         </select>
       </label>
-      <p class="hint">The collection and policy cannot be changed after launch.</p>
+      <p class="hint" id="launchHint">The collection and policy cannot be changed after launch. Pons launch fee: <b id="launchFee">…</b></p>
       <button class="btn btn-dark btn-lg full" value="submit">Launch</button>
     </form>
   </dialog>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
