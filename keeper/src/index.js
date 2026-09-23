@@ -6,6 +6,8 @@ import { loadConfig } from "./config.js";
 import { launcherAbi, routerAbi, vaultAbi, rafflesAbi, erc721Abi, arbSysAbi, ARB_SYS, POLICY } from "./abi.js";
 import { OpenSea, RateLimited } from "./opensea.js";
 import { serveSnapshots } from "./server.js";
+import { ExternalKeeper } from "./external.js";
+import { MagicEden } from "./magiceden.js";
 import { balancesAt, buildSnapshot, winnerOf } from "./snapshot.js";
 import { log, warn } from "./log.js";
 
@@ -20,6 +22,34 @@ const client = createPublicClient({ chain, transport: http(cfg.rpcUrl) });
 const account = privateKeyToAccount(cfg.privateKey);
 const wallet = createWalletClient({ account, chain, transport: http(cfg.rpcUrl) });
 const opensea = cfg.sweepDisabled ? null : new OpenSea({ apiKey: cfg.openseaApiKey, chain: cfg.openseaChain, log });
+
+async function makeExternal() {
+  if (!cfg.externalLauncher) return null;
+  const collections = JSON.parse(await readFile(cfg.collectionsFile, "utf8").catch(() => "[]"));
+  let solana = null;
+  if (cfg.solanaKey) {
+    const { SolanaSide } = await import("./solana.js");
+    solana = new SolanaSide({ secretKey: cfg.solanaKey, rpc: cfg.solanaRpc });
+  }
+  // Tests swap in a local target chain, bridge and marketplace (never set in production).
+  const hooks = process.env.KEEPER_TEST_HOOKS
+    ? (await import(new URL(process.env.KEEPER_TEST_HOOKS, `file://${process.cwd()}/`))).default({ account })
+    : {};
+  return new ExternalKeeper({
+    cfg, client, wallet, account, send, opensea, collections, solana, ...hooks,
+    magiceden: new MagicEden({ apiKey: cfg.magicedenApiKey }),
+    receipts: (l, tokenId, sig) => appendReceipt({ vault: l.vault, chainId: l.chainId, tokenId: tokenId.toString(), signature: sig }),
+  });
+}
+
+/** Solana signatures do not fit the vault's bytes32 field; publish them next to the snapshots. */
+async function appendReceipt(entry) {
+  const file = join(cfg.snapshotDir, "receipts.json");
+  const all = JSON.parse(await readFile(file, "utf8").catch(() => "[]"));
+  all.push({ ...entry, at: new Date().toISOString() });
+  await mkdir(cfg.snapshotDir, { recursive: true });
+  await writeFile(file, JSON.stringify(all, null, 2));
+}
 
 /** Chain time, not wall-clock time: the vault's checks use block.timestamp. */
 async function chainNow() {
@@ -191,9 +221,13 @@ async function progressRaffles(l) {
 }
 
 async function tick() {
-  const launches = await readLaunches();
+  const external = await makeExternal();
+  const launches = [...await readLaunches(), ...(external ? await external.readLaunches() : [])];
   for (const l of launches) {
-    for (const [name, step] of [["harvest", harvest], ["sweep", sweep], ["raffle-open", openRaffles], ["raffle-progress", progressRaffles]]) {
+    const buyStep = l.external ? (x) => (x.chainId === 792703809 && !external.solana
+      ? warn(`#${x.id} Solana coin: set KEEPER_SOLANA_KEY to buy`)
+      : external.tick(x)) : sweep;
+    for (const [name, step] of [["harvest", harvest], ["sweep", buyStep], ["raffle-open", openRaffles], ["raffle-progress", progressRaffles]]) {
       if (l.policy !== "raffle" && name.startsWith("raffle")) continue;
       try {
         await step(l);

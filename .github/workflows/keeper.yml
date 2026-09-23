@@ -4,6 +4,8 @@
 #   Settings → Secrets and variables → Actions
 #     Secrets:   KEEPER_PRIVATE_KEY  (dedicated keeper wallet, gas money only)
 #                OPENSEA_API_KEY     (optional; empty = auto free-tier key)
+#                KEEPER_SOLANA_KEY   (optional; base58 secret key, only for Solana collections)
+#                MAGICEDEN_API_KEY   (optional; needed to buy on Solana)
 #     Variables (optional): LAUNCHER, START_BLOCK — default to the mainnet deployment below
 #   Optional variables: MAX_CEILING_ETH, CEILING_MARKUP_BPS, MIN_HARVEST_ETH, DRY_RUN
 #
@@ -52,6 +54,10 @@ jobs:
           # Mainnet deployment; repo variables override these.
           LAUNCHER: ${{ vars.LAUNCHER || '0x4fbac0fe4ba373ea7c34661cb1b9934b6f4c5a37' }}
           START_BLOCK: ${{ vars.START_BLOCK || '70558619' }}
+          EXTERNAL_LAUNCHER: ${{ vars.EXTERNAL_LAUNCHER }}
+          KEEPER_SOLANA_KEY: ${{ secrets.KEEPER_SOLANA_KEY }}
+          MAGICEDEN_API_KEY: ${{ secrets.MAGICEDEN_API_KEY }}
+          COLLECTIONS_FILE: ../collections.json
           MAX_CEILING_ETH: ${{ vars.MAX_CEILING_ETH || '0.5' }}
           CEILING_MARKUP_BPS: ${{ vars.CEILING_MARKUP_BPS || '300' }}
           MIN_HARVEST_ETH: ${{ vars.MIN_HARVEST_ETH || '0.005' }}

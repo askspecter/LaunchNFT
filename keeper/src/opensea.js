@@ -1,6 +1,7 @@
 import { parseAbiItem, encodeFunctionData, getAddress } from "viem";
 
 const BASE = "https://api.opensea.io/api/v2";
+const NATIVE = ["ETH", "BNB"]; // listings priced in the chain's native currency
 
 export class RateLimited extends Error {
   constructor(until) {
@@ -52,6 +53,20 @@ export class OpenSea {
     return res.json();
   }
 
+  /** Same key and rate-limit state, different chain (e.g. "ethereum", "base", "bsc"). */
+  forChain(chain) {
+    if (chain === this.chain) return this;
+    this.children ||= new Map();
+    if (!this.children.has(chain)) {
+      const child = Object.create(this);
+      child.chain = chain;
+      child.slugs = new Map();
+      child.children = null;
+      this.children.set(chain, child);
+    }
+    return this.children.get(chain);
+  }
+
   async slugFor(contract) {
     const key = contract.toLowerCase();
     if (!this.slugs.has(key)) {
@@ -73,12 +88,12 @@ export class OpenSea {
           protocolAddress: l.protocol_address,
           price: BigInt(l.price.current.value),
           currency: l.price.current.currency,
-          token: offer?.token,
+          token: offer?.token && getAddress(offer.token),
           tokenId: offer ? BigInt(offer.identifierOrCriteria) : null,
           itemType: offer?.itemType,
         };
       })
-      .filter((l) => l.currency === "ETH" && l.token && getAddress(l.token) === getAddress(contract) && l.itemType === 2)
+      .filter((l) => NATIVE.includes(l.currency) && l.token && l.token === getAddress(contract) && l.itemType === 2)
       .sort((a, b) => (a.price < b.price ? -1 : 1));
   }
 
