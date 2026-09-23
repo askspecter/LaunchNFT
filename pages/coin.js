@@ -1,6 +1,6 @@
 import {
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, loadLaunch, loadRaffles, write,
-  eth, short, addrLink, txLink, colorFor,
+  eth, short, addrLink, txLink, colorFor, chainName, externalTxLink,
 } from "../lib.js";
 
 renderChrome("explore.html");
@@ -28,19 +28,20 @@ async function render() {
   const l = await loadLaunch(id);
   document.title = `$${l.symbol} · LaunchNFT`;
   const [ceiling, expiry, bought, raffles] = await Promise.all([
-    client.readContract({ address: l.vault, abi: ABI.vault, functionName: "ceiling" }),
-    client.readContract({ address: l.vault, abi: ABI.vault, functionName: "ceilingExpiry" }),
-    boughtNfts(l),
+    l.external ? 0n : client.readContract({ address: l.vault, abi: ABI.vault, functionName: "ceiling" }),
+    l.external ? 0n : client.readContract({ address: l.vault, abi: ABI.vault, functionName: "ceilingExpiry" }),
+    l.external ? [] : boughtNfts(l),
     l.policy === "Raffle" ? loadRaffles(l) : [],
   ]);
   const ceilingLive = Number(expiry) > Date.now() / 1000;
+  const currency = CONFIG.chains[l.chainId]?.currency || "ETH";
 
   $("#coin").innerHTML = `
     <section class="coin-head">
       <div class="coin-badge" style="background:linear-gradient(135deg, ${colorFor(l.symbol)}, #1b1d21)">$${esc(l.symbol)}</div>
       <div>
         <h1 class="page-title">${esc(l.name)}</h1>
-        <p class="muted">Collects ${addrLink(l.collection, l.collectionName)} · Policy <b>${l.policy}</b> · Created by ${addrLink(l.creator)}</p>
+        <p class="muted">Collects ${l.external ? `<b>${esc(l.collectionName)}</b> on ${esc(chainName(l.chainId))}` : addrLink(l.collection, l.collectionName)} · Policy <b>${l.policy}</b> · Created by ${addrLink(l.creator)}</p>
         <div class="cta-left">
           <a class="btn btn-dark" href="${CONFIG.explorer}/token/${l.token}" target="_blank" rel="noopener">Token on explorer</a>
           <button class="btn btn-ghost" id="harvest">Harvest ${eth(l.pending, 4)} ETH</button>
@@ -52,11 +53,19 @@ async function render() {
       <div class="kpi"><span>Vault balance</span><b>${eth(l.vaultBalance)} ETH</b></div>
       <div class="kpi"><span>NFTs held</span><b>${l.nfts}</b></div>
       <div class="kpi"><span>Fees awaiting harvest</span><b>${eth(l.pending, 4)} ETH</b></div>
-      <div class="kpi"><span>Price ceiling</span><b>${ceilingLive ? `${eth(ceiling, 4)} ETH` : "—"}</b></div>
+      ${l.external
+        ? `<div class="kpi"><span>Sent to ${esc(chainName(l.chainId))} / spent</span><b>${eth(l.withdrawn, 4)} / ${eth(l.spent, 4)}</b></div>`
+        : `<div class="kpi"><span>Price ceiling</span><b>${ceilingLive ? `${eth(ceiling, 4)} ETH` : "—"}</b></div>`}
     </div>
+    ${l.external && l.pendingAmount > 0n ? `<div class="card notice">Withdrawal of <b>${eth(l.pendingAmount, 4)} ETH</b> announced — it can leave the vault after ${new Date(l.pendingReadyAt * 1000).toLocaleString()} to buy on ${esc(chainName(l.chainId))}. The registry owner can cancel it until then.</div>` : ""}
 
     <h2 class="sub">Floor buys</h2>
-    ${bought.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>NFT</th><th>Price</th><th>Tx</th></tr></thead><tbody>
+    ${l.external ? (l.purchases.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>NFT</th><th>Paid (ETH)</th><th>Receipt</th></tr></thead><tbody>
+      ${l.purchases.slice().reverse().map((b) => {
+        const link = externalTxLink(l.chainId, b.externalTx);
+        return `<tr><td class="mono">#${String(b.tokenId).length > 12 ? short(`0x${b.tokenId.toString(16)}`) : b.tokenId}</td><td>${eth(b.price, 4)}</td><td>${link ? `<a class="mono" href="${link}" target="_blank" rel="noopener">${short(b.externalTx)}</a>` : `<span class="mono">${short(b.externalTx)}</span>`}</td></tr>`;
+      }).join("")}
+    </tbody></table></div>` : `<p class="empty">No NFTs bought yet. Once the vault can afford the floor on ${esc(chainName(l.chainId))} (in ${currency}), the keeper announces a withdrawal and buys.</p>`) : bought.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>NFT</th><th>Price</th><th>Tx</th></tr></thead><tbody>
       ${bought.map((b) => `<tr><td>#${b.tokenId}</td><td>${eth(b.price, 4)} ETH</td><td><a class="mono" href="${txLink(b.tx)}" target="_blank" rel="noopener">${short(b.tx)}</a></td></tr>`).join("")}
     </tbody></table></div>` : `<p class="empty">No NFTs bought yet. The keeper buys once the vault can afford the floor.</p>`}
 

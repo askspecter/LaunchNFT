@@ -1,6 +1,6 @@
 import {
   CONFIG, ABI, client, $, esc, toast, renderChrome, connect, walletClient, getAccount, onAccount,
-  isAddress, getAddress, addrLink, txLink, eth,
+  isAddress, getAddress, addrLink, txLink, eth, collectionKey, base58Decode,
 } from "../lib.js";
 import { parseAbi, encodeDeployData } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
@@ -57,12 +57,16 @@ async function send(label, req) {
 }
 
 async function deploy(label, artifact, args) {
+  return deployTo(logStep, label, artifact, args);
+}
+
+async function deployTo(log, label, artifact, args) {
   const wallet = await walletClient();
   const data = encodeDeployData({ abi: artifact.abi, bytecode: artifact.bytecode, args });
   // Estimating also surfaces a revert reason before anything is sent.
   const gas = withMargin(await client.estimateGas({ account: wallet.account, data }));
   const hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, args, gas });
-  logStep(`${label}: sent (gas limit ${gas})`, txLink(hash));
+  log(`${label}: sent (gas limit ${gas})`, txLink(hash));
   const r = await client.waitForTransactionReceipt({ hash });
   if (r.status !== "success" || !r.contractAddress) {
     throw new Error(`${label} deploy failed (used ${r.gasUsed} of ${gas} gas) — tap the tx link for details`);
@@ -200,3 +204,96 @@ const initial = saved();
 if (initial.registry && initial.launcher) showResult({ registry: initial.registry, launcher: initial.launcher, block: initial.block });
 if (isAddress(CONFIG.launcher)) $("#deployCard").querySelector("#deploy").textContent = "Deploy again (already configured)";
 refreshRegistry().catch(() => {});
+
+// ------------------------------------------------------------------ other chains
+
+const EXT_KEY = "launchnft-deploy-external";
+const extSaved = () => { try { return JSON.parse(localStorage.getItem(EXT_KEY) || "{}"); } catch { return {}; } };
+const extSave = (v) => { try { localStorage.setItem(EXT_KEY, JSON.stringify({ ...extSaved(), ...v })); } catch {} };
+
+function extLog(text, href) {
+  const li = document.createElement("li");
+  li.innerHTML = href ? `${esc(text)} — <a href="${href}" target="_blank" rel="noopener">tx</a>` : esc(text);
+  $("#externalLog").append(li);
+}
+
+function showExternal(launcher) {
+  $("#externalResult").innerHTML = `
+    <h4>Deployed ✓</h4>
+    <dl class="addresses"><dt>External launcher</dt><dd>${addrLink(launcher, launcher)}</dd></dl>
+    <p class="muted">Put this in <code>config.js</code> (or send it to your developer):</p>
+    <pre class="snippet">externalLauncher: "${launcher}",</pre>`;
+}
+
+$("#deployExternal").addEventListener("click", async (e) => {
+  if (!isAddress(CONFIG.launcher)) return toast("Deploy the Robinhood contracts first");
+  const btn = e.target;
+  btn.disabled = true;
+  $("#externalLog").innerHTML = "";
+  try {
+    const owner = getAccount() || (await connect());
+    await mustChain();
+    const artifacts = await (await fetch("artifacts/deploy.json")).json();
+    const L = CONFIG.launcher;
+    const read = (address, fn) => client.readContract({
+      address, abi: parseAbi([`function ${fn}() view returns (address)`]), functionName: fn,
+    });
+    const reg = await read(L, "registry");
+    const routerImpl = await read(L, "routerImplementation");
+    const raffles = await read(await read(L, "vaultImplementation"), "raffles");
+
+    let p = extSaved();
+    if (p.owner !== owner || p.registry !== reg) { p = { owner, registry: reg }; extSave(p); }
+    if (!p.vaultImpl) {
+      p.vaultImpl = (await deployTo(extLog, "External vault template", artifacts.ExternalVault, [reg, raffles])).contractAddress;
+      extSave({ vaultImpl: p.vaultImpl });
+    }
+    extLog(`External vault template: ${p.vaultImpl}`);
+    if (!p.launcher) {
+      p.launcher = (await deployTo(extLog, "External launcher", artifacts.ExternalLauncher, [CONFIG.ponsFactory, reg, p.vaultImpl, routerImpl])).contractAddress;
+      extSave({ launcher: p.launcher });
+    }
+    extLog(`External launcher: ${p.launcher}`);
+    showExternal(p.launcher);
+  } catch (err) {
+    toast(err.shortMessage || err.message);
+    extLog(`Stopped: ${err.shortMessage || err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function extCollectionCheck(chainId, address) {
+  const chain = CONFIG.chains[chainId];
+  if (!chain.evm) { base58Decode(address); return; } // throws if not a Solana address
+  if (!isAddress(address)) throw new Error("Enter a valid 0x address");
+  // Confirm it is an ERC-721 on that chain via its public RPC.
+  const res = await fetch(chain.rpc, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: address, data: "0x01ffc9a780ac58cd00000000000000000000000000000000000000000000000000000000" }, "latest"] }),
+  }).then((r) => r.json()).catch(() => null);
+  if (!res || res.error || !res.result || BigInt(res.result || "0x0") !== 1n) {
+    throw new Error(`That address is not an ERC-721 collection on ${chain.name}`);
+  }
+}
+
+$("#listExternal").addEventListener("click", async () => {
+  const chainId = Number($("#extChain").value);
+  const address = $("#extAddress").value.trim();
+  const name = $("#extName").value.trim();
+  const slug = $("#extSlug").value.trim();
+  try {
+    if (!name) throw new Error("Enter a name");
+    await extCollectionCheck(chainId, address);
+    const key = collectionKey(chainId, address);
+    await registryWrite(`List ${name}`, "setCollection", [key, true]);
+    const entry = { chainId, address: CONFIG.chains[chainId].evm ? getAddress(address) : address, name, slug };
+    $("#extSnippet").hidden = false;
+    $("#extSnippet").textContent = JSON.stringify(entry, null, 2) + ",";
+  } catch (err) {
+    toast(err.shortMessage || err.message);
+  }
+});
+
+if (extSaved().launcher) showExternal(extSaved().launcher);
+if (isAddress(CONFIG.externalLauncher || "")) $("#deployExternal").textContent = "Deploy again (already configured)";

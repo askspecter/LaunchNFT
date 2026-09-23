@@ -1,6 +1,7 @@
 import {
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, walletClient, getAccount, connect,
-  listedCollections, loadLaunches, colorFor, eth, isAddress, toHex, short,
+  listedCollectionsDetailed, loadLaunches, colorFor, eth, toHex, short, chainName, ROBINHOOD,
+  externalLive, collectionId,
 } from "../lib.js";
 import { parseAbi, zeroAddress, encodeFunctionData } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
@@ -47,18 +48,14 @@ async function loadCollections() {
     $("#colList").innerHTML = `<p class="empty">Contracts not deployed yet.</p>`;
     return;
   }
-  const [addresses, launches] = await Promise.all([listedCollections(), loadLaunches(500).catch(() => [])]);
-  state.collections = await Promise.all(addresses.map(async (address) => {
-    const name = await client.readContract({ address, abi: ABI.erc721, functionName: "name" }).catch(() => null);
-    const coins = launches.filter((l) => l.collection.toLowerCase() === address.toLowerCase());
-    return {
-      address,
-      name: name || short(address),
-      chain: name ? "Robinhood" : "Other",
-      coins: coins.length,
-      vaultEth: coins.reduce((s, c) => s + c.vaultBalance, 0n),
-    };
-  }));
+  const [listed, launches] = await Promise.all([listedCollectionsDetailed(), loadLaunches(500).catch(() => [])]);
+  state.collections = listed
+    // Other-chain collections need the "Other chains" contracts deployed to launch.
+    .filter((c) => c.chainId === ROBINHOOD || externalLive)
+    .map((c) => {
+      const coins = launches.filter((l) => l.collection.toLowerCase() === c.key.toLowerCase());
+      return { ...c, chain: chainName(c.chainId), coins: coins.length, vaultEth: coins.reduce((s, x) => s + x.vaultBalance, 0n) };
+    });
   state.collections.sort((a, b) => b.coins - a.coins || a.name.localeCompare(b.name));
   renderCollections();
 }
@@ -116,7 +113,7 @@ function renderCollections() {
   const rows = state.collections.filter((c) =>
     (state.chain === "all" || c.chain === state.chain) && (!q || c.name.toLowerCase().includes(q) || c.address.toLowerCase().includes(q)));
   $("#colList").innerHTML = rows.length ? rows.map((c) => `
-    <button class="col${state.collection?.address === c.address ? " selected" : ""}" data-address="${c.address}">
+    <button class="col${state.collection?.key === c.key ? " selected" : ""}" data-key="${c.key}">
       <span class="col-avatar" style="background:${colorFor(c.name)}">${esc(c.name.slice(0, 1))}</span>
       <span class="col-main"><b>${esc(c.name)}</b><small class="mono">${short(c.address)}</small>
         <span class="col-meta"><em class="pill-chain">${c.chain}</em>${c.coins} coin${c.coins === 1 ? "" : "s"} · ${eth(c.vaultEth, 4)} ETH in vaults</span></span>
@@ -128,7 +125,7 @@ function renderSummary() {
   const rows = [
     ["Name", esc(val("name"))],
     ["Ticker", `$${esc(val("symbol").toUpperCase())}`],
-    ["Collects", state.collection ? `${esc(state.collection.name)} <small class="mono">${short(state.collection.address)}</small>` : "—"],
+    ["Collects", state.collection ? `${esc(state.collection.name)} <small>${esc(state.collection.chain)} · <span class="mono">${short(state.collection.address)}</span></small>` : "—"],
     ["NFTs", POLICY_NAMES[policy()]],
     ["Creator tax", `${(Number(taxBps()) / 100).toFixed(2)}%`],
   ];
@@ -136,7 +133,11 @@ function renderSummary() {
   const s = split();
   $("#facts").innerHTML = [
     `80% of everything your coin earns goes to the ${state.collection ? esc(state.collection.name) : "collection"} vault and 20% to the treasury. This split is fixed in the fee router's code, and nobody can change it.`,
-    "The collection and the NFT rule are permanent. The vault has no withdraw function.",
+    state.collection && state.collection.chainId !== ROBINHOOD
+      ? `This collection is on ${esc(state.collection.chain)}. The keeper moves the vault's ETH there to buy: every withdrawal is announced 1 hour ahead and can be cancelled, and each purchase is recorded on Robinhood Chain.`
+      : "The collection and the NFT rule are permanent. The vault has no withdraw function.",
+    state.collection && state.collection.chainId !== ROBINHOOD && !CONFIG.chains[state.collection.chainId]?.evm
+      ? "Raffle winners on Solana enter their Solana address on the Claims page to receive the NFT." : "",
     state.pons ? `Once ${eth(state.pons.graduation, 2)} ETH is in the curve, the coin moves to a locked Uniswap v4 pool, and fees keep flowing the same way.` : "",
     s ? `With ${(Number(taxBps()) / 100).toFixed(2)}% tax, every 1 ETH of trading sends about ${eth(s.vault, 4)} ETH to the vault.` : "",
   ].filter(Boolean).map((t) => `<li>${t}</li>`).join("");
@@ -205,9 +206,9 @@ $("#chainChips").addEventListener("click", (e) => {
   renderCollections();
 });
 $("#colList").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-address]");
+  const b = e.target.closest("[data-key]");
   if (!b) return;
-  state.collection = state.collections.find((c) => c.address === b.dataset.address);
+  state.collection = state.collections.find((c) => c.key === b.dataset.key);
   renderCollections();
   renderPreview();
 });
@@ -232,7 +233,8 @@ $("#launchBtn").addEventListener("click", async (e) => {
       client.readContract({ address: CONFIG.ponsFactory, abi: ABI.pons, functionName: "launchFee" }),
       client.readContract({ address: CONFIG.ponsFactory, abi: ABI.pons, functionName: "previewLaunchEconomics", args: [0n, zeroAddress] }),
     ]);
-    const args = [{
+    const external = state.collection.chainId !== ROBINHOOD;
+    const base = {
       name: val("name"),
       symbol: val("symbol").toUpperCase(),
       logo: val("logo"),
@@ -242,16 +244,20 @@ $("#launchBtn").addEventListener("click", async (e) => {
       launchConfigId: 0n,
       expectedEconomics: economics,
       salt: toHex(crypto.getRandomValues(new Uint8Array(32))),
-      collection: state.collection.address,
       policy: policy(),
-    }];
-    const req = { address: CONFIG.launcher, abi: ABI.launcher, functionName: "launch", args, value: fee, account: wallet.account };
+    };
+    const args = [external
+      ? { ...base, chainId: BigInt(state.collection.chainId), collection: collectionId(state.collection.chainId, state.collection.address), isEvm: !!CONFIG.chains[state.collection.chainId]?.evm }
+      : { ...base, collection: state.collection.address }];
+    const target = external ? CONFIG.externalLauncher : CONFIG.launcher;
+    const abi = external ? ABI.extLauncher : ABI.launcher;
+    const req = { address: target, abi, functionName: "launch", args, value: fee, account: wallet.account };
     await client.simulateContract(req); // surfaces a revert reason before the wallet opens
     const gas = ((await client.estimateContractGas(req)) * 13n) / 10n;
     btn.textContent = "Confirm in your wallet…";
     const hash = await wallet.sendTransaction({
-      to: CONFIG.launcher, value: fee, gas,
-      data: encodeFunctionData({ abi: ABI.launcher, functionName: "launch", args }),
+      to: target, value: fee, gas,
+      data: encodeFunctionData({ abi, functionName: "launch", args }),
     });
     btn.textContent = "Launching…";
     const receipt = await client.waitForTransactionReceipt({ hash });
@@ -260,9 +266,9 @@ $("#launchBtn").addEventListener("click", async (e) => {
         ? "Out of gas: your wallet capped the gas limit at 1.2M. Raise it to 4,000,000 in the wallet, or use MetaMask."
         : "Launch transaction failed");
     }
-    const count = await client.readContract({ address: CONFIG.launcher, abi: ABI.launcher, functionName: "launchCount" });
+    const count = await client.readContract({ address: target, abi, functionName: "launchCount" });
     toast("Launched!");
-    location.href = `coin.html?id=${Number(count) - 1}`;
+    location.href = `coin.html?id=${external ? "e" : ""}${Number(count) - 1}`;
   } catch (err) {
     toast(err.shortMessage || err.message);
     btn.textContent = `Launch $${val("symbol").toUpperCase()}`;

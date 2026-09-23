@@ -1,6 +1,6 @@
 import {
   createPublicClient, createWalletClient, custom, http, defineChain, parseAbi,
-  formatEther, isAddress, toHex, getAddress,
+  formatEther, isAddress, toHex, getAddress, keccak256, encodeAbiParameters, pad,
 } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 import { CONFIG } from "./config.js";
 
@@ -15,6 +15,9 @@ export const chain = defineChain({
 });
 export const client = createPublicClient({ chain, transport: http() });
 export const live = isAddress(CONFIG.launcher);
+export const externalLive = isAddress(CONFIG.externalLauncher || "");
+export const ROBINHOOD = CONFIG.chainId;
+export const chainName = (id) => CONFIG.chains[Number(id)]?.name || `Chain ${id}`;
 
 export const ABI = {
   pons: parseAbi([
@@ -48,6 +51,32 @@ export const ABI = {
     "function raffleCount(address vault) view returns (uint256)",
     "function raffles(address vault, uint256 id) view returns (Raffle)",
     "function claim(address vault, uint256 id, address account, uint256 start, uint256 end, bytes32[] proof)",
+  ]),
+  extLauncher: parseAbi([
+    "struct Socials { string twitter; string telegram; string discord; string website; string farcaster; }",
+    "struct LaunchParams { string name; string symbol; string logo; string description; Socials socials; uint16 creatorTaxBps; uint256 launchConfigId; bytes32 expectedEconomics; bytes32 salt; uint64 chainId; bytes32 collection; bool isEvm; uint8 policy; }",
+    "function launch(LaunchParams p) payable returns (uint256)",
+    "function launchCount() view returns (uint256)",
+    "function launches(uint256) view returns (address token, address curve, address router, address vault, address collection, address creator)",
+    "function collectionKey(uint64 chainId, bytes32 collection) pure returns (address)",
+  ]),
+  extVault: parseAbi([
+    "function policy() view returns (uint8)",
+    "function raffles() view returns (address)",
+    "function externalChainId() view returns (uint64)",
+    "function externalCollection() view returns (bytes32)",
+    "function externalIsEvm() view returns (bool)",
+    "function pendingAmount() view returns (uint256)",
+    "function pendingReadyAt() view returns (uint256)",
+    "function totalWithdrawn() view returns (uint256)",
+    "function totalSpent() view returns (uint256)",
+    "function prizeOwedTo(uint256) view returns (address)",
+    "function prizeDestination(uint256) view returns (bytes32)",
+    "function setPrizeDestination(uint256 tokenId, bytes32 destination)",
+    "function cancelWithdrawal()",
+    "event ExternalPurchase(uint256 indexed tokenId, uint256 price, bytes32 externalTx)",
+    "event PrizeOwed(uint256 indexed tokenId, address indexed to)",
+    "event PrizeDelivered(uint256 indexed tokenId, address indexed to, bytes32 destination, bytes32 externalTx)",
   ]),
   erc20: parseAbi(["function name() view returns (string)", "function symbol() view returns (string)"]),
   erc721: parseAbi([
@@ -183,28 +212,127 @@ export async function launchCount() {
   return live ? Number(await read(CONFIG.launcher, ABI.launcher, "launchCount")) : 0;
 }
 
-/** Full view of one launch, including live vault numbers. */
+// ---------------------------------------------------------------- collections metadata
+
+let metaPromise;
+/** Names and marketplace slugs for listed collections, from collections.json. */
+export function collectionMeta() {
+  metaPromise ||= fetch(CONFIG.collectionsUrl).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+  return metaPromise;
+}
+
+/** A collection id as bytes32: EVM addresses are left-padded, Solana addresses base58-decoded. */
+export function collectionId(chainId, address) {
+  return CONFIG.chains[Number(chainId)]?.evm ? pad(getAddress(address), { size: 32 }) : toHex(base58Decode(address), { size: 32 });
+}
+
+/** Registry key: the address itself on Robinhood Chain, a hash of (chain, id) elsewhere. */
+export function collectionKey(chainId, address) {
+  if (Number(chainId) === ROBINHOOD) return getAddress(address);
+  const hash = keccak256(encodeAbiParameters([{ type: "uint64" }, { type: "bytes32" }], [BigInt(chainId), collectionId(chainId, address)]));
+  return getAddress(`0x${hash.slice(-40)}`);
+}
+
+export async function metaByKey() {
+  const map = new Map();
+  for (const c of await collectionMeta()) {
+    try { map.set(collectionKey(c.chainId, c.address), c); } catch { /* malformed entry */ }
+  }
+  return map;
+}
+
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+export function base58Decode(str) {
+  let n = 0n;
+  for (const ch of str) {
+    const i = B58.indexOf(ch);
+    if (i < 0) throw new Error("Invalid Solana address");
+    n = n * 58n + BigInt(i);
+  }
+  const bytes = [];
+  while (n > 0n) { bytes.unshift(Number(n & 0xffn)); n >>= 8n; }
+  for (const ch of str) { if (ch !== "1") break; bytes.unshift(0); }
+  if (bytes.length !== 32) throw new Error("Solana address must be 32 bytes");
+  return new Uint8Array(bytes);
+}
+export function base58Encode(hex) {
+  let n = BigInt(hex);
+  let out = "";
+  while (n > 0n) { out = B58[Number(n % 58n)] + out; n /= 58n; }
+  const bytes = hex.slice(2).match(/../g) || [];
+  for (const b of bytes) { if (b !== "00") break; out = "1" + out; }
+  return out;
+}
+
+// ---------------------------------------------------------------- launches
+
+async function nameFor(meta, collection) {
+  const m = meta.get(getAddress(collection));
+  if (m) return m.name;
+  return read(collection, ABI.erc721, "name").catch(() => short(collection));
+}
+
+/** Full view of one launch. `id` is a number for Robinhood coins, "e<n>" for other chains. */
 export async function loadLaunch(id) {
+  if (String(id).startsWith("e")) return loadExternalLaunch(Number(String(id).slice(1)));
+  const meta = await metaByKey();
   const [token, curve, router, vault, collection, creator] = await read(CONFIG.launcher, ABI.launcher, "launches", [BigInt(id)]);
   const [name, symbol, collectionName, vaultBalance, nfts, pending, policy] = await Promise.all([
     read(token, ABI.erc20, "name"),
     read(token, ABI.erc20, "symbol"),
-    read(collection, ABI.erc721, "name").catch(() => short(collection)),
+    nameFor(meta, collection),
     client.getBalance({ address: vault }),
-    read(collection, ABI.erc721, "balanceOf", [vault]),
+    read(collection, ABI.erc721, "balanceOf", [vault]).catch(() => 0n),
     read(router, ABI.router, "pending").catch(() => 0n),
     read(vault, ABI.vault, "policy"),
   ]);
   return {
-    id: Number(id), token, curve, router, vault, collection, creator,
+    id: Number(id), chainId: ROBINHOOD, external: false, token, curve, router, vault, collection, creator,
     name, symbol, collectionName, vaultBalance, nfts: Number(nfts), pending, policy: POLICIES[policy],
+  };
+}
+
+export async function loadExternalLaunch(n) {
+  const meta = await metaByKey();
+  const [token, curve, router, vault, collection, creator] = await read(CONFIG.externalLauncher, ABI.extLauncher, "launches", [BigInt(n)]);
+  const v = (fn) => read(vault, ABI.extVault, fn);
+  const [name, symbol, vaultBalance, pending, policy, chainId, isEvm, withdrawn, spent, pendingAmount, pendingReadyAt, buys] = await Promise.all([
+    read(token, ABI.erc20, "name"),
+    read(token, ABI.erc20, "symbol"),
+    client.getBalance({ address: vault }),
+    read(router, ABI.router, "pending").catch(() => 0n),
+    v("policy"), v("externalChainId"), v("externalIsEvm"), v("totalWithdrawn"), v("totalSpent"),
+    v("pendingAmount"), v("pendingReadyAt"),
+    client.getContractEvents({ address: vault, abi: ABI.extVault, eventName: "ExternalPurchase", fromBlock: BigInt(CONFIG.startBlock || 0), toBlock: "latest" }),
+  ]);
+  const m = meta.get(getAddress(collection));
+  return {
+    id: `e${n}`, chainId: Number(chainId), external: true, isEvm, token, curve, router, vault, collection, creator,
+    name, symbol, collectionName: m?.name || `${chainName(chainId)} collection`, collectionAddress: m?.address,
+    vaultBalance, pending, policy: POLICIES[policy], nfts: buys.length,
+    withdrawn, spent, pendingAmount, pendingReadyAt: Number(pendingReadyAt),
+    purchases: buys.map((b) => ({ tokenId: b.args.tokenId, price: b.args.price, externalTx: b.args.externalTx })),
   };
 }
 
 export async function loadLaunches(limit = 60) {
   const count = await launchCount();
   const ids = [...Array(Math.min(count, limit)).keys()].map((i) => count - 1 - i);
-  return Promise.all(ids.map(loadLaunch));
+  let ext = [];
+  if (externalLive) {
+    const n = Number(await read(CONFIG.externalLauncher, ABI.extLauncher, "launchCount"));
+    ext = [...Array(Math.min(n, limit)).keys()].map((i) => `e${n - 1 - i}`);
+  }
+  return Promise.all([...ids, ...ext].map(loadLaunch));
+}
+
+/** Explorer link for a transaction on an EVM chain. Solana signatures (64 bytes) do not fit the
+ *  vault's bytes32 field; for Solana the keeper records a hash and publishes the signature in
+ *  its receipts file, so there is no direct link. */
+export function externalTxLink(chainId, txHash) {
+  const c = CONFIG.chains[Number(chainId)];
+  if (!c?.evm || !txHash || /^0x0+$/.test(txHash)) return null;
+  return `${c.explorer}/tx/${txHash}`;
 }
 
 export async function loadRaffles(l) {
@@ -228,6 +356,7 @@ export function winnerEntry(snapshot, ticket) {
   return snapshot.entries.find((e) => BigInt(e.start) <= t && t < BigInt(e.end));
 }
 
+/** Registry keys of every listed collection (Robinhood addresses and other-chain keys). */
 export async function listedCollections() {
   const registry = await read(CONFIG.launcher, ABI.launcher, "registry");
   const logs = await client.getContractEvents({
@@ -236,6 +365,18 @@ export async function listedCollections() {
   const state = new Map();
   for (const { args } of logs) state.set(getAddress(args.collection), args.listed);
   return [...state].filter(([, listed]) => listed).map(([a]) => a);
+}
+
+/** Listed collections with chain + name, ready for pickers and lists. */
+export async function listedCollectionsDetailed() {
+  const [keys, meta] = await Promise.all([listedCollections(), metaByKey()]);
+  return Promise.all(keys.map(async (key) => {
+    const m = meta.get(key);
+    if (m) return { key, chainId: Number(m.chainId), address: m.address, name: m.name, slug: m.slug };
+    // Unknown key: a Robinhood collection not in collections.json yet (other-chain keys need metadata).
+    const name = await read(key, ABI.erc721, "name").catch(() => null);
+    return name ? { key, chainId: ROBINHOOD, address: key, name } : null;
+  })).then((rows) => rows.filter(Boolean));
 }
 
 export const COLORS = ["#ff5a3c", "#3b82f6", "#10b981", "#a855f7", "#f59e0b", "#ec4899", "#14b8a6", "#6366f1"];
@@ -248,6 +389,7 @@ export function coinCard(c) {
     <div class="art" style="background:linear-gradient(135deg, ${colorFor(c.symbol)}, #1b1d21)">$${esc(c.symbol)}</div>
     <div class="body">
       <h4>${esc(c.name)} <small>${esc(c.policy || "")}</small></h4>
+      ${c.chainId && c.chainId !== ROBINHOOD ? `<span class="pill-chain">${esc(chainName(c.chainId))}</span>` : ""}
       <div class="meta"><span>Collects <b>${esc(c.collectionName)}</b></span></div>
       <div class="meta"><span>Vault <b>${eth(c.vaultBalance)} ETH</b></span><span><b>${c.nfts}</b> NFTs</span></div>
     </div>

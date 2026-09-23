@@ -290,3 +290,7 @@ a.coin { display: block; }
 .wizard-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
 .wizard-nav #next { margin-left: auto; }
 [hidden] { display: none !important; }
+.notice { margin: 12px 0; font-size: 14px; }
+.dest { display: flex; gap: 6px; }
+.dest input { min-width: 180px; padding: 8px 10px; font-size: 13px; }
+.coin .pill-chain { display: inline-block; margin-top: 6px; }
