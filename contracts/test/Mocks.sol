@@ -71,3 +71,15 @@ contract MockPons {
         curve = address(uint160(token) + 1);
     }
 }
+
+/// @dev Stand-in for the ArbSys precompile (0x64), which forge does not emulate.
+contract MockArbSys {
+    function arbBlockNumber() external view returns (uint256) {
+        return block.number;
+    }
+
+    function arbBlockHash(uint256 n) external view returns (bytes32) {
+        require(n < block.number && block.number - n <= 256, "invalid block");
+        return blockhash(n);
+    }
+}

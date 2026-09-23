@@ -8,7 +8,7 @@ import {Launcher} from "../src/Launcher.sol";
 import {FeeRouter} from "../src/FeeRouter.sol";
 import {SweepVault} from "../src/SweepVault.sol";
 import {IPonsFactory} from "../src/interfaces/IPons.sol";
-import {MockNFT, MockMarket, MockEscrow, MockPons} from "./Mocks.sol";
+import {MockNFT, MockMarket, MockEscrow, MockPons, MockArbSys} from "./Mocks.sol";
 
 contract LaunchNFTTest is Test {
     address owner = makeAddr("owner");
@@ -25,6 +25,7 @@ contract LaunchNFTTest is Test {
     MockMarket market;
 
     function setUp() public {
+        vm.etch(address(0x64), address(new MockArbSys()).code);
         registry = new Registry(owner, keeper, treasury);
         pons = new MockPons();
         launcher = new Launcher(IPonsFactory(address(pons)), registry);
@@ -172,11 +173,16 @@ contract LaunchNFTTest is Test {
         uint256 id = vault.openRaffle(9, root, 100);
 
         vm.expectRevert("too early");
+        vault.commitDraw(id);
+        vm.expectRevert("not committed");
         vault.draw(id);
 
-        (,,,, uint64 drawBlock,,,) = vault.raffles(id);
-        vm.roll(drawBlock + 1);
         skip(15 minutes);
+        vault.commitDraw(id);
+        (,,,, uint64 drawBlock,,,) = vault.raffles(id);
+        vm.expectRevert("too early");
+        vault.draw(id);
+        vm.roll(drawBlock + 1);
         vault.draw(id);
         (,,,,, uint256 winning, bool drawn,) = vault.raffles(id);
         assertTrue(drawn);
@@ -196,7 +202,7 @@ contract LaunchNFTTest is Test {
         vault.claim(id, alice, 0, 60, proof);
     }
 
-    function test_raffleRetargetsStaleBlock() public {
+    function test_raffleExpiredDrawCanBeRecommitted() public {
         (FeeRouter router, SweepVault vault) = _launch(SweepVault.Policy.Raffle);
         _fund(router, 1 ether);
         _list(2, 0.5 ether);
@@ -204,13 +210,22 @@ contract LaunchNFTTest is Test {
         vm.prank(keeper);
         uint256 id = vault.openRaffle(2, keccak256("root"), 10);
 
-        (,,,, uint64 drawBlock,,,) = vault.raffles(id);
-        vm.roll(drawBlock + 300);
         skip(15 minutes);
+        vault.commitDraw(id);
+        (,,,, uint64 drawBlock,,,) = vault.raffles(id);
+        vm.roll(drawBlock + 300); // hash no longer readable
+
         vault.draw(id);
-        (,,,, uint64 newBlock,, bool drawn,) = vault.raffles(id);
+        (,,,, uint64 cleared,, bool drawn,) = vault.raffles(id);
         assertFalse(drawn);
-        assertEq(newBlock, block.number + 5);
+        assertEq(cleared, 0);
+
+        vault.commitDraw(id); // anyone can re-commit
+        (,,,, uint64 again,,,) = vault.raffles(id);
+        vm.roll(again + 1);
+        vault.draw(id);
+        (,,,,,, drawn,) = vault.raffles(id);
+        assertTrue(drawn);
     }
 
     function testFuzz_harvestSplitIsExact(uint96 fees) public {

@@ -6,6 +6,7 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Registry} from "./Registry.sol";
+import {ARB_SYS} from "./interfaces/IArbSys.sol";
 
 /// @notice Holds a coin's share of fees and can spend it on exactly one thing:
 /// NFTs from the paired collection, bought through an allow-listed marketplace
@@ -15,6 +16,8 @@ contract SweepVault is IERC721Receiver, ReentrancyGuard {
 
     uint256 public constant CEILING_TTL = 1 hours;
     uint256 public constant SNAPSHOT_DELAY = 15 minutes;
+    /// @dev Chain blocks (~0.1s each) between committing a draw and the block whose hash seeds it.
+    uint256 public constant DRAW_OFFSET = 20;
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     Registry public immutable registry;
@@ -29,7 +32,7 @@ contract SweepVault is IERC721Receiver, ReentrancyGuard {
         bytes32 root; // leaves: keccak256(abi.encode(account, start, end)), tickets [start, end)
         uint256 totalTickets;
         uint64 publishedAt;
-        uint64 drawBlock;
+        uint64 drawBlock; // 0 until a draw is committed
         uint256 winningTicket;
         bool drawn;
         bool claimed;
@@ -41,7 +44,9 @@ contract SweepVault is IERC721Receiver, ReentrancyGuard {
     event CeilingPosted(uint256 ceiling, uint256 expiry);
     event Bought(address indexed marketplace, uint256 indexed tokenId, uint256 price);
     event Burned(uint256 indexed tokenId);
-    event RaffleOpened(uint256 indexed id, uint256 indexed tokenId, bytes32 root, uint256 totalTickets, uint64 drawBlock);
+    event RaffleOpened(uint256 indexed id, uint256 indexed tokenId, bytes32 root, uint256 totalTickets);
+    event DrawCommitted(uint256 indexed id, uint64 drawBlock);
+    event DrawExpired(uint256 indexed id, uint64 drawBlock);
     event RaffleDrawn(uint256 indexed id, uint256 winningTicket);
     event RaffleClaimed(uint256 indexed id, address indexed winner, uint256 tokenId);
 
@@ -93,32 +98,43 @@ contract SweepVault is IERC721Receiver, ReentrancyGuard {
 
     // --------------------------------------------------------------- raffles
 
-    /// @notice Keeper publishes a holder snapshot for one NFT. The draw uses the hash of
-    /// a block that is still in the future when the snapshot is published.
+    /// @notice Keeper publishes a holder snapshot for one NFT held by the vault.
     function openRaffle(uint256 tokenId, bytes32 root, uint256 totalTickets) external onlyKeeper returns (uint256 id) {
         require(policy == Policy.Raffle, "policy");
         require(collection.ownerOf(tokenId) == address(this) && !inRaffle[tokenId], "nft unavailable");
         require(totalTickets > 0 && root != bytes32(0), "empty snapshot");
 
         inRaffle[tokenId] = true;
-        uint64 drawBlock = uint64(block.number + SNAPSHOT_DELAY / 12);
         id = raffles.length;
-        raffles.push(Raffle(tokenId, root, totalTickets, uint64(block.timestamp), drawBlock, 0, false, false));
-        emit RaffleOpened(id, tokenId, root, totalTickets, drawBlock);
+        raffles.push(Raffle(tokenId, root, totalTickets, uint64(block.timestamp), 0, 0, false, false));
+        emit RaffleOpened(id, tokenId, root, totalTickets);
     }
 
-    /// @notice Anyone can draw once the snapshot delay has passed. If the draw block is
-    /// older than 256 blocks its hash is gone, so the raffle re-targets a new future block.
+    /// @notice Step 1, callable by anyone once the snapshot has been public for SNAPSHOT_DELAY:
+    /// pins a block that does not exist yet, so nobody knows its hash at commit time.
+    function commitDraw(uint256 id) external {
+        Raffle storage r = raffles[id];
+        require(!r.drawn && r.drawBlock == 0, "committed");
+        require(block.timestamp >= r.publishedAt + SNAPSHOT_DELAY, "too early");
+        r.drawBlock = uint64(ARB_SYS.arbBlockNumber() + DRAW_OFFSET);
+        emit DrawCommitted(id, r.drawBlock);
+    }
+
+    /// @notice Step 2, callable by anyone after the pinned block. Block hashes are only
+    /// readable for 256 blocks; if that window was missed the commit is cleared and
+    /// `commitDraw` must be called again (logged via DrawExpired).
     function draw(uint256 id) external {
         Raffle storage r = raffles[id];
-        require(!r.drawn, "drawn");
-        require(block.timestamp >= r.publishedAt + SNAPSHOT_DELAY && block.number > r.drawBlock, "too early");
+        require(!r.drawn && r.drawBlock != 0, "not committed");
+        uint256 current = ARB_SYS.arbBlockNumber();
+        require(current > r.drawBlock, "too early");
 
-        bytes32 seed = blockhash(r.drawBlock);
-        if (seed == bytes32(0)) {
-            r.drawBlock = uint64(block.number + 5);
+        if (current - r.drawBlock > 256) {
+            emit DrawExpired(id, r.drawBlock);
+            r.drawBlock = 0;
             return;
         }
+        bytes32 seed = ARB_SYS.arbBlockHash(r.drawBlock);
         r.winningTicket = uint256(keccak256(abi.encode(seed, address(this), id))) % r.totalTickets;
         r.drawn = true;
         emit RaffleDrawn(id, r.winningTicket);
