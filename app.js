@@ -1,8 +1,6 @@
 import {
-  CONFIG, ABI, client, live, $, toast, renderChrome, walletClient, loadLaunches, coinCard,
-  eth, formatEther, toHex,
+  live, $, toast, renderChrome, loadLaunches, coinCard, formatEther,
 } from "./lib.js";
-import { zeroAddress } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
 const RULES = [
   ["PAIRING", "locked at launch"],
@@ -24,7 +22,6 @@ const SAMPLE = [
   { name: "Cat Collector", symbol: "MEOW", collectionName: "Night Cats", vaultBalance: 3_900000000000000000n, nfts: 57, policy: "Raffle" },
 ];
 
-const POLICY = { raffle: 0, hold: 1, burn: 2 };
 let coins = live ? [] : SAMPLE;
 let currentSort = "new";
 
@@ -70,70 +67,6 @@ $("#tabs").addEventListener("click", (e) => {
   renderGrid();
 });
 
-// ------------------------------------------------------------------ launch
-
-const dlg = $("#launchDialog");
-document.querySelectorAll("[data-open-launch]").forEach((b) => b.addEventListener("click", () => dlg.showModal()));
-if (location.hash === "#launch") dlg.showModal();
-
-$("#launchForm").addEventListener("submit", async (e) => {
-  if (e.submitter?.value !== "submit") return;
-  e.preventDefault();
-  if (!live) return toast("Launcher not deployed yet — set CONFIG.launcher in config.js");
-  const f = new FormData(e.target);
-  const btn = e.submitter;
-  btn.disabled = true;
-  try {
-    const wallet = await walletClient();
-    const [fee, economics] = await Promise.all([
-      client.readContract({ address: CONFIG.ponsFactory, abi: ABI.pons, functionName: "launchFee" }),
-      client.readContract({ address: CONFIG.ponsFactory, abi: ABI.pons, functionName: "previewLaunchEconomics", args: [0n, zeroAddress] }),
-    ]);
-    btn.textContent = "Confirm in wallet…";
-    const hash = await wallet.writeContract({
-      address: CONFIG.launcher,
-      abi: ABI.launcher,
-      functionName: "launch",
-      value: fee,
-      args: [{
-        name: f.get("name").trim(),
-        symbol: f.get("ticker").trim().toUpperCase(),
-        logo: f.get("logo") || "",
-        description: f.get("description") || "",
-        socials: { twitter: "", telegram: "", discord: "", website: "", farcaster: "" },
-        creatorTaxBps: Math.round(Number(f.get("tax") || 0) * 100),
-        launchConfigId: 0n,
-        expectedEconomics: economics,
-        salt: toHex(crypto.getRandomValues(new Uint8Array(32))),
-        collection: f.get("collection"),
-        policy: POLICY[f.get("policy")],
-      }],
-    });
-    btn.textContent = "Launching…";
-    const receipt = await client.waitForTransactionReceipt({ hash });
-    if (receipt.status !== "success") throw new Error("Launch reverted");
-    dlg.close();
-    e.target.reset();
-    toast("Coin launched on Pons");
-    await refresh();
-    location.href = `coin.html?id=${coins.length ? coins[0].id : 0}`;
-  } catch (err) {
-    toast(err.shortMessage || err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Launch";
-  }
-});
-
-async function loadLaunchFee() {
-  try {
-    const fee = await client.readContract({ address: CONFIG.ponsFactory, abi: ABI.pons, functionName: "launchFee" });
-    $("#launchFee").textContent = `${eth(fee, 6)} ETH`;
-  } catch {
-    $("#launchFee").textContent = "unavailable";
-  }
-}
-
 async function refresh() {
   if (live) coins = await loadLaunches(24);
   renderGrid();
@@ -141,5 +74,5 @@ async function refresh() {
 }
 
 renderRules();
-loadLaunchFee();
+if (location.hash === "#launch") location.replace("launch.html");
 refresh().catch((e) => toast("Could not load launches: " + (e.shortMessage || e.message)));

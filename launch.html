@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Launch · LaunchNFT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page wizard">
+    <h1 class="page-title">Launch a coin</h1>
+    <p class="lead-left">Create a Pons coin on Robinhood Chain whose trading fees collect an NFT collection. Fill in four short steps, then confirm one transaction.</p>
+
+    <ol class="stepper" id="stepper">
+      <li data-step="0"><b>1</b><span>Coin<small>Name and image</small></span></li>
+      <li data-step="1"><b>2</b><span>Collection<small>What it collects</small></span></li>
+      <li data-step="2"><b>3</b><span>Rules<small>NFTs and tax</small></span></li>
+      <li data-step="3"><b>4</b><span>Confirm<small>Check and launch</small></span></li>
+    </ol>
+
+    <section class="card preview" id="preview"></section>
+
+    <!-- Step 1 -->
+    <section class="card step" data-panel="0">
+      <h3>Your coin</h3>
+      <label>Name<input id="name" maxlength="32" placeholder="Floor Muncher" /></label>
+      <label>Ticker<input id="symbol" maxlength="10" placeholder="MUNCH" /></label>
+      <label>Image URL<input id="logo" type="url" placeholder="https://…/image.png" /></label>
+      <p class="hint">Paste a link to a square PNG, JPG or GIF (for example from X, IPFS or Imgur). It is stored with the coin on Pons.</p>
+      <label>Description<textarea id="description" maxlength="280" rows="3" placeholder="What is this coin about?"></textarea></label>
+      <details class="more-links">
+        <summary>Links (optional)</summary>
+        <label>Website<input id="website" type="url" placeholder="https://" /></label>
+        <label>X / Twitter<input id="twitter" type="url" placeholder="https://x.com/…" /></label>
+        <label>Telegram<input id="telegram" type="url" placeholder="https://t.me/…" /></label>
+        <label>Discord<input id="discord" type="url" placeholder="https://discord.gg/…" /></label>
+      </details>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="card step" data-panel="1">
+      <h3>Pick the collection it collects</h3>
+      <p class="muted">Only listed collections can be paired. The choice is permanent.</p>
+      <div class="chips" id="chainChips"></div>
+      <input class="search" id="colSearch" placeholder="Search collections" />
+      <div class="col-list" id="colList"><p class="empty">Loading…</p></div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="card step" data-panel="2">
+      <h3>What happens to the NFTs</h3>
+      <p class="muted">Fixed at launch, so holders know the rules will not change.</p>
+      <div class="options" id="policyOptions">
+        <label class="option"><input type="radio" name="policy" value="0" checked />
+          <span><b>Raffle to holders</b><small>Each NFT goes to one holder. The more coins you hold, the better your odds.</small></span></label>
+        <label class="option"><input type="radio" name="policy" value="2" />
+          <span><b>Burn</b><small>Every NFT is sent to a dead address, shrinking the collection's supply for good.</small></span></label>
+        <label class="option"><input type="radio" name="policy" value="1" />
+          <span><b>Keep in the vault</b><small>The vault keeps every NFT it buys, forever.</small></span></label>
+      </div>
+      <div class="tax">
+        <div class="tax-head"><span>Creator tax</span><b id="taxLabel">1.00%</b></div>
+        <input type="range" id="tax" min="0" max="1000" step="25" value="100" />
+        <div class="tax-scale"><span>0%</span><span id="taxMax">max 10%</span></div>
+        <p class="hint">An extra fee on every trade, on top of Pons' base fee. It is routed the same way as the rest of your fees.</p>
+      </div>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="card step" data-panel="3">
+      <h3>Confirm</h3>
+      <dl class="summary" id="summary"></dl>
+      <div class="fee-box">
+        <div><span>Pons launch fee</span><b id="launchFee">…</b></div>
+        <p class="hint">Plus network gas (a fraction of a cent). One transaction creates the coin, its fee router and its vault.</p>
+      </div>
+      <ul class="facts" id="facts"></ul>
+      <button class="btn btn-dark btn-lg full" id="launchBtn">Connect wallet</button>
+      <p class="hint" id="gasHint">Some mobile wallets cap gas at 1.2M. A launch needs about 4M. If yours fails with "out of gas", raise the gas limit in the wallet's advanced settings, or use MetaMask.</p>
+    </section>
+
+    <div class="wizard-nav">
+      <button class="btn btn-ghost" id="back">Back</button>
+      <button class="btn btn-dark" id="next">Continue →</button>
+    </div>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="pages/launch.js"></script>
+</body>
+</html>

@@ -150,7 +150,7 @@ export function renderChrome(active) {
       </nav>
       <div class="nav-actions">
         <button class="btn btn-ghost" data-connect>Connect</button>
-        <a class="btn btn-dark" href="index.html#launch">Launch</a>
+        <a class="btn btn-dark" href="launch.html">Launch</a>
         <button class="burger" id="burger" aria-label="Menu">☰</button>
       </div>`;
     $("[data-connect]", header).addEventListener("click", () => connect().catch((e) => toast(e.shortMessage || e.message)));

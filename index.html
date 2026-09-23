@@ -19,7 +19,7 @@
       <h1>Every trade of your coin<br /><em>collects NFTs</em> for its holders</h1>
       <p class="lead">Launch a Pons coin tied to an NFT collection on Robinhood Chain. 80% of its creator fees is locked in a vault that is only allowed to buy floor pieces from that collection, then hands them back to the community.</p>
       <div class="cta">
-        <button class="btn btn-dark btn-lg" data-open-launch>Launch a coin</button>
+        <a class="btn btn-dark btn-lg" href="launch.html">Launch a coin</a>
         <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
       </div>
       <div class="stats">
@@ -81,29 +81,6 @@
 
   <footer id="site-footer"></footer>
 
-  <dialog id="launchDialog">
-    <form method="dialog" id="launchForm">
-      <div class="dlg-head">
-        <h3>Launch a coin</h3>
-        <button value="cancel" class="x" aria-label="Close">✕</button>
-      </div>
-      <label>Coin name<input name="name" required maxlength="32" placeholder="Floor Muncher" /></label>
-      <label>Ticker<input name="ticker" required maxlength="8" placeholder="MUNCH" /></label>
-      <label>Logo URL<input name="logo" type="url" placeholder="https://…/logo.png" /></label>
-      <label>Description<input name="description" maxlength="280" placeholder="What is this coin about?" /></label>
-      <label>NFT collection address<input name="collection" required pattern="^0x[a-fA-F0-9]{40}$" placeholder="0x…" /></label>
-      <label>Creator tax (%, extra on top of Pons fee)<input name="tax" type="number" min="0" max="10" step="0.1" value="0" /></label>
-      <label>NFT policy
-        <select name="policy">
-          <option value="raffle">Raffle to holders</option>
-          <option value="hold">Hold in vault</option>
-          <option value="burn">Burn</option>
-        </select>
-      </label>
-      <p class="hint" id="launchHint">The collection and policy cannot be changed after launch. Pons launch fee: <b id="launchFee">…</b></p>
-      <button class="btn btn-dark btn-lg full" value="submit">Launch</button>
-    </form>
-  </dialog>
 
   <script type="module" src="app.js"></script>
 </body>
