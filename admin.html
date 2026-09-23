@@ -44,7 +44,7 @@
       <button class="btn btn-ghost" id="setKeeper">Change keeper</button>
     </section>
     <section class="card" id="externalCard">
-      <h3>3. Other chains (Ethereum, Base, BNB, Solana)</h3>
+      <h3>3. Other chains (Ethereum, Base, BNB)</h3>
       <p class="muted">Deploys the vault template and launcher used for collections outside Robinhood Chain. That is 2 small transactions, each under 1.1M gas. It reuses your Registry and Raffles.</p>
       <button class="btn btn-dark btn-lg full" id="deployExternal">Deploy other-chain contracts</button>
       <ol class="steps-log" id="externalLog"></ol>
@@ -58,12 +58,11 @@
           <option value="1">Ethereum</option>
           <option value="8453">Base</option>
           <option value="56">BNB Chain</option>
-          <option value="792703809">Solana</option>
         </select>
       </label>
-      <label>Collection address (Solana: collection address)<input id="extAddress" placeholder="0x… or Solana address" /></label>
+      <label>Collection contract address<input id="extAddress" placeholder="0x…" /></label>
       <label>Name shown on the site<input id="extName" placeholder="Milady Maker" /></label>
-      <label>Marketplace slug (OpenSea for EVM, Magic Eden symbol for Solana)<input id="extSlug" placeholder="milady" /></label>
+      <label>OpenSea collection slug<input id="extSlug" placeholder="milady" /></label>
       <button class="btn btn-dark" id="listExternal">List collection</button>
       <p class="hint">After listing, add the collection to <code>collections.json</code> on GitHub (the snippet appears below) so the site and keeper know its name and slug.</p>
       <pre class="snippet" id="extSnippet" hidden></pre>

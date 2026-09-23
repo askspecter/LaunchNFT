@@ -221,9 +221,9 @@ export function collectionMeta() {
   return metaPromise;
 }
 
-/** A collection id as bytes32: EVM addresses are left-padded, Solana addresses base58-decoded. */
-export function collectionId(chainId, address) {
-  return CONFIG.chains[Number(chainId)]?.evm ? pad(getAddress(address), { size: 32 }) : toHex(base58Decode(address), { size: 32 });
+/** A collection id as the bytes32 the ExternalLauncher expects: the address, left-padded. */
+export function collectionId(_chainId, address) {
+  return pad(getAddress(address), { size: 32 });
 }
 
 /** Registry key: the address itself on Robinhood Chain, a hash of (chain, id) elsewhere. */
@@ -241,28 +241,6 @@ export async function metaByKey() {
   return map;
 }
 
-const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-export function base58Decode(str) {
-  let n = 0n;
-  for (const ch of str) {
-    const i = B58.indexOf(ch);
-    if (i < 0) throw new Error("Invalid Solana address");
-    n = n * 58n + BigInt(i);
-  }
-  const bytes = [];
-  while (n > 0n) { bytes.unshift(Number(n & 0xffn)); n >>= 8n; }
-  for (const ch of str) { if (ch !== "1") break; bytes.unshift(0); }
-  if (bytes.length !== 32) throw new Error("Solana address must be 32 bytes");
-  return new Uint8Array(bytes);
-}
-export function base58Encode(hex) {
-  let n = BigInt(hex);
-  let out = "";
-  while (n > 0n) { out = B58[Number(n % 58n)] + out; n /= 58n; }
-  const bytes = hex.slice(2).match(/../g) || [];
-  for (const b of bytes) { if (b !== "00") break; out = "1" + out; }
-  return out;
-}
 
 // ---------------------------------------------------------------- launches
 
@@ -326,9 +304,7 @@ export async function loadLaunches(limit = 60) {
   return Promise.all([...ids, ...ext].map(loadLaunch));
 }
 
-/** Explorer link for a transaction on an EVM chain. Solana signatures (64 bytes) do not fit the
- *  vault's bytes32 field; for Solana the keeper records a hash and publishes the signature in
- *  its receipts file, so there is no direct link. */
+/** Explorer link for a purchase or delivery transaction on another chain. */
 export function externalTxLink(chainId, txHash) {
   const c = CONFIG.chains[Number(chainId)];
   if (!c?.evm || !txHash || /^0x0+$/.test(txHash)) return null;

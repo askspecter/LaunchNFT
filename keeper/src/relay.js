@@ -1,8 +1,6 @@
 // Minimal Relay (relay.link) client: quotes and executes bridges/swaps out of Robinhood Chain.
 const BASE = "https://api.relay.link";
 export const NATIVE_EVM = "0x0000000000000000000000000000000000000000";
-export const NATIVE_SOL = "11111111111111111111111111111111";
-export const SOLANA_CHAIN_ID = 792703809;
 
 async function post(path, body) {
   const res = await fetch(BASE + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -19,7 +17,7 @@ export async function quote({ originChainId, destinationChainId, user, recipient
   const q = await post("/quote", {
     user, recipient, originChainId, destinationChainId, tradeType,
     originCurrency: NATIVE_EVM,
-    destinationCurrency: destinationChainId === SOLANA_CHAIN_ID ? NATIVE_SOL : NATIVE_EVM,
+    destinationCurrency: NATIVE_EVM,
     amount: amount.toString(),
   });
   return {

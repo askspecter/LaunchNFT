@@ -1,6 +1,6 @@
 import {
   CONFIG, ABI, client, $, esc, toast, renderChrome, connect, walletClient, getAccount, onAccount,
-  isAddress, getAddress, addrLink, txLink, eth, collectionKey, base58Decode,
+  isAddress, getAddress, addrLink, txLink, eth, collectionKey,
 } from "../lib.js";
 import { parseAbi, encodeDeployData } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
@@ -265,7 +265,6 @@ $("#deployExternal").addEventListener("click", async (e) => {
 
 async function extCollectionCheck(chainId, address) {
   const chain = CONFIG.chains[chainId];
-  if (!chain.evm) { base58Decode(address); return; } // throws if not a Solana address
   if (!isAddress(address)) throw new Error("Enter a valid 0x address");
   // Confirm it is an ERC-721 on that chain via its public RPC.
   const res = await fetch(chain.rpc, {
@@ -287,7 +286,7 @@ $("#listExternal").addEventListener("click", async () => {
     await extCollectionCheck(chainId, address);
     const key = collectionKey(chainId, address);
     await registryWrite(`List ${name}`, "setCollection", [key, true]);
-    const entry = { chainId, address: CONFIG.chains[chainId].evm ? getAddress(address) : address, name, slug };
+    const entry = { chainId, address: getAddress(address), name, slug };
     $("#extSnippet").hidden = false;
     $("#extSnippet").textContent = JSON.stringify(entry, null, 2) + ",";
   } catch (err) {

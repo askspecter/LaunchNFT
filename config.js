@@ -10,14 +10,13 @@ export const CONFIG = {
   launcher: "0x4fbac0fe4ba373ea7c34661cb1b9934b6f4c5a37",
   startBlock: 70558619, // block the Registry was deployed in
   snapshotBaseUrl: "snapshots/", // where the keeper's SNAPSHOT_DIR is served
-  externalLauncher: "", // set after deploying "Other chains" on admin.html
+  externalLauncher: "0xdbe1b07b2e5c4d4c32c4813c360ba3341f766270", // Ethereum / Base / BNB collections
   // Chains a coin can collect NFTs on. Ids for non-Robinhood chains follow Relay's chain ids.
   chains: {
     4663: { name: "Robinhood", evm: true, currency: "ETH", explorer: "https://robinhoodchain.blockscout.com", opensea: "robinhood" },
     1: { name: "Ethereum", evm: true, currency: "ETH", explorer: "https://etherscan.io", rpc: "https://ethereum-rpc.publicnode.com", opensea: "ethereum" },
     8453: { name: "Base", evm: true, currency: "ETH", explorer: "https://basescan.org", rpc: "https://base-rpc.publicnode.com", opensea: "base" },
     56: { name: "BNB", evm: true, currency: "BNB", explorer: "https://bscscan.com", rpc: "https://bsc-rpc.publicnode.com", opensea: "bsc" },
-    792703809: { name: "Solana", evm: false, currency: "SOL", explorer: "https://solscan.io" },
   },
   collectionsUrl: "collections.json", // names + marketplace slugs for listed collections
 };

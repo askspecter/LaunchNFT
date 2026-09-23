@@ -1,6 +1,6 @@
 import {
   ABI, $, esc, live, toast, renderChrome, connect, onAccount, getAccount, loadLaunches, loadRaffles,
-  loadSnapshot, winnerEntry, write, addrLink, getAddress, client, chainName, base58Decode, toHex,
+  loadSnapshot, winnerEntry, write, addrLink, getAddress, client, chainName,
 } from "../lib.js";
 
 renderChrome("claims.html");
@@ -19,12 +19,9 @@ async function loadDraws() {
     } catch { /* snapshot not published yet */ }
     if (d.launch.external && d.claimed) {
       const read = (fn) => client.readContract({ address: d.launch.vault, abi: ABI.extVault, functionName: fn, args: [d.tokenId] });
-      const [owed, dest] = await Promise.all([read("prizeOwedTo"), read("prizeDestination")]);
+      const owed = await read("prizeOwedTo");
       const chain = chainName(d.launch.chainId);
-      if (owed === "0x0000000000000000000000000000000000000000") d.prize = `Delivered on ${chain}`;
-      else if (d.launch.isEvm) d.prize = `Sending to your address on ${chain}`;
-      else if (/^0x0+$/.test(dest)) d.prize = "solana-needs-address";
-      else d.prize = `Destination saved — delivery pending on ${chain}`;
+      d.prize = owed === "0x0000000000000000000000000000000000000000" ? `Delivered on ${chain}` : `Sending to your address on ${chain}`;
     }
   }));
 }
@@ -55,27 +52,9 @@ function renderMine(account) {
       const action = d.claimed ? (won ? (d.launch.external ? d.prize : "Delivered to you") : "—")
         : won ? `<button class="btn btn-dark" data-claim="${i}">Claim NFT</button>`
         : d.drawn ? "Not won" : "Waiting for draw";
-      const cell = action === "solana-needs-address"
-        ? `<span class="dest"><input placeholder="Your Solana address" /><button class="btn btn-dark" data-dest="${i}">Save</button></span>`
-        : action;
-      return `<tr><td>$${esc(d.launch.symbol)}</td><td>#${String(d.tokenId).length > 12 ? "NFT" : d.tokenId}</td><td>${odds}%</td><td>${cell}</td></tr>`;
+      return `<tr><td>$${esc(d.launch.symbol)}</td><td>#${d.tokenId}</td><td>${odds}%</td><td>${action}</td></tr>`;
     }).join("")}
   </tbody></table></div>`;
-  $("#mine").querySelectorAll("[data-dest]").forEach((btn) => btn.addEventListener("click", async () => {
-    const d = mine[Number(btn.dataset.dest)];
-    const input = btn.previousElementSibling;
-    try {
-      const dest = toHex(base58Decode(input.value.trim()), { size: 32 });
-      btn.disabled = true;
-      await write({ address: d.launch.vault, abi: ABI.extVault, functionName: "setPrizeDestination", args: [d.tokenId, dest] });
-      toast("Saved — the keeper will send your NFT there");
-      d.prize = "Destination saved — delivery pending";
-      renderMine(account);
-    } catch (err) {
-      toast(err.shortMessage || err.message);
-      btn.disabled = false;
-    }
-  }));
   $("#mine").querySelectorAll("[data-claim]").forEach((btn) => btn.addEventListener("click", async () => {
     const d = mine[Number(btn.dataset.claim)];
     btn.disabled = true;
