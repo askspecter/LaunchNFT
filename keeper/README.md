@@ -27,6 +27,10 @@ Run it under a process manager such as systemd, pm2 or a container with a restar
 
 **Snapshots for a static site (Vercel):** set `SNAPSHOT_PORT`. The keeper then serves `SNAPSHOT_DIR` read-only with CORS at `/<vault>-<id>.json`, plus `/health`. Put it behind HTTPS (a Caddy/nginx reverse proxy, or the host's HTTPS URL) and set `snapshotBaseUrl` in the site's `config.js` to that URL.
 
+## Run on GitHub Actions (no server)
+
+`.github/workflows/keeper.yml` runs one pass every 30 minutes (`--once`) and commits new raffle snapshots to `snapshots/`, which the static site serves. Configure it with the repo secrets `KEEPER_PRIVATE_KEY` and `OPENSEA_API_KEY`, and the variables `LAUNCHER` and `START_BLOCK`. The workflow does nothing until `LAUNCHER` is set. See `../PANDUAN-HP.md`.
+
 ## Test
 
 ```sh

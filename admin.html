@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Admin · LaunchNFT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page admin">
+    <h1 class="page-title">Admin</h1>
+    <p class="lead-left">Deploy and manage the LaunchNFT contracts from a phone wallet. Open this page in your wallet's built-in browser (MetaMask, Rabby, Coinbase Wallet…).</p>
+
+    <section class="card">
+      <h3>Wallet</h3>
+      <p id="walletInfo" class="muted">Not connected.</p>
+      <button class="btn btn-dark" id="connect">Connect wallet</button>
+    </section>
+
+    <section class="card" id="deployCard">
+      <h3>1. Deploy contracts</h3>
+      <p class="muted">Your connected wallet becomes the <b>owner</b>. It deploys the Registry, allow-lists Seaport 1.6, and then deploys the Launcher on top of Pons V2. That is 3 transactions, costing about 0.0005 ETH in total.</p>
+      <label>Keeper address (separate wallet the bot uses)<input id="keeper" placeholder="0x…" /></label>
+      <label>Treasury address (receives 20% of fees)<input id="treasury" placeholder="0x…" /></label>
+      <button class="btn btn-dark btn-lg full" id="deploy">Deploy</button>
+      <ol class="steps-log" id="deployLog"></ol>
+      <div id="deployResult"></div>
+    </section>
+
+    <section class="card" id="manageCard">
+      <h3>2. Manage registry</h3>
+      <p class="muted" id="registryInfo">Set <code>launcher</code> in config.js (or deploy above) to manage the registry.</p>
+      <label>Collection address to list<input id="collection" placeholder="0x…" /></label>
+      <div class="cta-left">
+        <button class="btn btn-dark" id="list">List collection</button>
+        <button class="btn btn-ghost" id="delist">Delist</button>
+      </div>
+      <label>New keeper address<input id="newKeeper" placeholder="0x…" /></label>
+      <button class="btn btn-ghost" id="setKeeper">Change keeper</button>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="pages/admin.js"></script>
+</body>
+</html>

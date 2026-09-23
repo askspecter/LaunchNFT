@@ -206,3 +206,8 @@ a.coin { display: block; }
   .addresses { grid-template-columns: 1fr; gap: 2px 0; }
   .addresses dd { margin-bottom: 10px; }
 }
+.admin .card { margin-bottom: 16px; }
+.admin .card h3 { margin: 0 0 8px; }
+.steps-log { font-size: 13px; color: var(--muted); padding-left: 18px; }
+.steps-log a { text-decoration: underline; }
+.snippet { font-family: "JetBrains Mono", monospace; font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
