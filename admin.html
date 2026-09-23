@@ -68,6 +68,14 @@
       <p class="hint">After listing, add the collection to <code>collections.json</code> on GitHub (the snippet appears below) so the site and keeper know its name and slug.</p>
       <pre class="snippet" id="extSnippet" hidden></pre>
     </section>
+    <section class="card" id="bulkCard">
+      <h3>5. List every collection in collections.json</h3>
+      <p class="muted" id="bulkInfo">Checking which collections still need listing…</p>
+      <p class="hint">The Registry is lent to a small helper contract that can only list collections for you and must hand it back. It takes about 30 collections per transaction. If anything stops halfway, tap the button again, or use “Give Registry back”.</p>
+      <button class="btn btn-dark btn-lg full" id="bulkList" disabled>List all</button>
+      <button class="btn btn-ghost" id="bulkGiveBack" hidden>Give Registry back</button>
+      <ol class="steps-log" id="bulkLog"></ol>
+    </section>
   </main>
   <footer id="site-footer"></footer>
   <script type="module" src="pages/admin.js"></script>

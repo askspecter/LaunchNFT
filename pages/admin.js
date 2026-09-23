@@ -1,6 +1,6 @@
 import {
   CONFIG, ABI, client, $, esc, toast, renderChrome, connect, walletClient, getAccount, onAccount,
-  isAddress, getAddress, addrLink, txLink, eth, collectionKey,
+  isAddress, getAddress, addrLink, txLink, eth, collectionKey, collectionMeta,
 } from "../lib.js";
 import { parseAbi, encodeDeployData } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
@@ -297,3 +297,103 @@ $("#listExternal").addEventListener("click", async () => {
 
 if (extSaved().launcher) showExternal(extSaved().launcher);
 if (isAddress(CONFIG.externalLauncher || "")) $("#deployExternal").textContent = "Deploy again (already configured)";
+
+// ------------------------------------------------------------------ bulk listing
+
+const BULK_KEY = "launchnft-bulk";
+const CHUNK = 30; // ~0.75M gas per chunk, under a 1.2M wallet cap
+const LISTER_ABI = parseAbi([
+  "function list(address[] keys, bool listed)",
+  "function listAndGiveBack(address[] keys)",
+  "function giveBack()",
+]);
+const OWNABLE_ABI = parseAbi(["function owner() view returns (address)", "function transferOwnership(address newOwner)"]);
+const bulkSaved = () => { try { return JSON.parse(localStorage.getItem(BULK_KEY) || "{}"); } catch { return {}; } };
+const bulkSave = (v) => { try { localStorage.setItem(BULK_KEY, JSON.stringify({ ...bulkSaved(), ...v })); } catch {} };
+const bulkLog = (text, href) => {
+  const li = document.createElement("li");
+  li.innerHTML = href ? `${esc(text)} — <a href="${href}" target="_blank" rel="noopener">tx</a>` : esc(text);
+  $("#bulkLog").append(li);
+};
+
+async function pendingKeys() {
+  const reg = await client.readContract({ address: CONFIG.launcher, abi: ABI.launcher, functionName: "registry" });
+  const meta = await collectionMeta();
+  const keys = [...new Set(meta.map((c) => collectionKey(c.chainId, c.address)))];
+  const listed = await Promise.all(keys.map((k) => client.readContract({ address: reg, abi: ABI.registry, functionName: "isCollection", args: [k] })));
+  return { reg, total: keys.length, todo: keys.filter((_, i) => !listed[i]) };
+}
+
+async function refreshBulk() {
+  if (!isAddress(CONFIG.launcher)) return;
+  const { reg, total, todo } = await pendingKeys();
+  const owner = await client.readContract({ address: reg, abi: OWNABLE_ABI, functionName: "owner" });
+  const lent = bulkSaved().lister && getAddress(owner) === getAddress(bulkSaved().lister);
+  $("#bulkInfo").textContent = `${total} collections in collections.json, ${total - todo.length} already listed, ${todo.length} to list (${Math.max(1, Math.ceil(todo.length / CHUNK))} listing transaction${todo.length > CHUNK ? "s" : ""} + setup).`;
+  $("#bulkList").disabled = todo.length === 0;
+  $("#bulkGiveBack").hidden = !lent;
+}
+
+async function sendAndWait(label, req) {
+  const wallet = await walletClient();
+  const { request } = await client.simulateContract({ account: wallet.account, ...req });
+  const gas = withMargin(await client.estimateContractGas({ account: wallet.account, ...req }));
+  const hash = await wallet.writeContract({ ...request, gas });
+  bulkLog(`${label}: sent`, txLink(hash));
+  const r = await client.waitForTransactionReceipt({ hash });
+  if (r.status !== "success") throw new Error(`${label} failed`);
+}
+
+$("#bulkList").addEventListener("click", async (e) => {
+  const btn = e.target;
+  btn.disabled = true;
+  $("#bulkLog").innerHTML = "";
+  try {
+    const me = getAccount() || (await connect());
+    await mustChain();
+    const { reg, todo } = await pendingKeys();
+    if (!todo.length) return bulkLog("Everything is already listed");
+    let p = bulkSaved();
+    if (p.owner !== me || p.registry !== reg) { p = { owner: me, registry: reg }; bulkSave(p); }
+    if (!p.lister) {
+      const artifacts = await (await fetch("artifacts/deploy.json")).json();
+      p.lister = (await deployTo(bulkLog, "Helper contract", artifacts.BatchLister, [reg, me])).contractAddress;
+      bulkSave({ lister: p.lister });
+    }
+    const owner = await client.readContract({ address: reg, abi: OWNABLE_ABI, functionName: "owner" });
+    if (getAddress(owner) === getAddress(me)) {
+      await sendAndWait("Lend Registry to helper", { address: reg, abi: OWNABLE_ABI, functionName: "transferOwnership", args: [p.lister] });
+    } else if (getAddress(owner) !== getAddress(p.lister)) {
+      throw new Error("The Registry is owned by another address");
+    }
+    for (let i = 0; i < todo.length; i += CHUNK) {
+      const chunk = todo.slice(i, i + CHUNK);
+      const last = i + CHUNK >= todo.length;
+      await sendAndWait(`List ${i + 1}–${i + chunk.length} of ${todo.length}${last ? " and give Registry back" : ""}`, {
+        address: p.lister, abi: LISTER_ABI, functionName: last ? "listAndGiveBack" : "list", args: last ? [chunk] : [chunk, true],
+      });
+    }
+    bulkLog("Done ✓ — all collections listed and the Registry is yours again");
+    toast("All collections listed");
+  } catch (err) {
+    toast(err.shortMessage || err.message);
+    bulkLog(`Stopped: ${err.shortMessage || err.message}`);
+  } finally {
+    await refreshBulk().catch(() => {});
+  }
+});
+
+$("#bulkGiveBack").addEventListener("click", async () => {
+  try {
+    await connect();
+    await mustChain();
+    await sendAndWait("Give Registry back", { address: bulkSaved().lister, abi: LISTER_ABI, functionName: "giveBack" });
+    toast("Registry returned");
+  } catch (err) {
+    toast(err.shortMessage || err.message);
+  } finally {
+    await refreshBulk().catch(() => {});
+  }
+});
+
+refreshBulk().catch(() => ($("#bulkInfo").textContent = "Could not read the Registry."));
