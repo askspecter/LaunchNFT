@@ -1,6 +1,6 @@
 const RULES = [
   ["PAIRING", "locked at launch"],
-  ["FEE SPLIT", "75 vault / 25 protocol"],
+  ["FEE SPLIT", "80 vault / 20 protocol"],
   ["SPEND LIMIT", "price ≤ posted ceiling"],
   ["CEILING TTL", "expires after 1 hour"],
   ["MARKET", "allow-listed orderbook only"],
