@@ -1,4 +1,4 @@
-// Solana side of the keeper: its wallet, balances, Magic Eden buys and NFT transfers.
+// Solana side of the keeper: its wallet, balances, OpenSea buys and NFT transfers.
 import {
   Connection, Keypair, PublicKey, VersionedTransaction, Transaction, LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
@@ -29,16 +29,22 @@ export class SolanaSide {
     return BigInt(await this.conn.getBalance(this.keypair.publicKey));
   }
 
-  /** Buys a Magic Eden listing; returns the transaction signature. */
-  async buy(listing, magiceden, dryRun) {
-    const raw = await magiceden.buyTransaction(listing, this.address);
-    const tx = VersionedTransaction.deserialize(raw);
-    tx.sign([this.keypair]);
-    const sim = await this.conn.simulateTransaction(tx);
-    if (sim.value.err) throw new Error(`Solana buy simulation failed: ${JSON.stringify(sim.value.err)}`);
-    if (dryRun) return log(`[dry-run] buy ${listing.mint} for ${listing.priceSol} SOL`), null;
-    const sig = await this.conn.sendTransaction(tx);
-    await this.conn.confirmTransaction(sig, "confirmed");
+  /**
+   * Buys an OpenSea Solana listing: OpenSea returns co-signed transaction bytes; we add our
+   * signature to those exact bytes (never rebuild them) and broadcast. Returns the last signature.
+   */
+  async buy(listing, opensea, dryRun) {
+    const encoded = await opensea.solanaFulfillment(listing, this.address);
+    let sig = null;
+    for (const b64 of encoded) {
+      const tx = VersionedTransaction.deserialize(Buffer.from(b64, "base64"));
+      tx.sign([this.keypair]);
+      const sim = await this.conn.simulateTransaction(tx, { sigVerify: false });
+      if (sim.value.err) throw new Error(`Solana buy simulation failed: ${JSON.stringify(sim.value.err)}`);
+      if (dryRun) { log(`[dry-run] buy ${listing.mint} for ${Number(listing.price) / 1e9} SOL`); return null; }
+      sig = await this.conn.sendRawTransaction(tx.serialize());
+      await this.conn.confirmTransaction(sig, "confirmed");
+    }
     log(`bought ${listing.mint} on Solana ✓ ${sig}`);
     return sig;
   }

@@ -97,6 +97,54 @@ export class OpenSea {
       .sort((a, b) => (a.price < b.price ? -1 : 1));
   }
 
+  /**
+   * Cheapest listings by collection slug, for chains without an EVM contract lookup (Solana).
+   * Price is in the chain's smallest unit (lamports on Solana). `mint` is the NFT's address.
+   */
+  async bestListingsBySlug(slug, limit = 10) {
+    const data = await this.#get(`/listings/collection/${encodeURIComponent(slug)}/best?limit=${limit}`);
+    return (data.listings || [])
+      .map((l) => {
+        const offer = l.protocol_data?.parameters?.offer?.[0];
+        return {
+          hash: l.order_hash,
+          protocolAddress: l.protocol_address,
+          price: BigInt(l.price.current.value),
+          currency: l.price.current.currency,
+          mint: offer?.token || l.asset?.identifier || l.nft?.identifier || l.token_id || null,
+        };
+      })
+      .filter((l) => l.currency === "SOL")
+      .sort((a, b) => (a.price < b.price ? -1 : 1));
+  }
+
+  /**
+   * Solana listings settle through an onchain program: OpenSea returns an already co-signed
+   * transaction (base64) that the buyer signs and broadcasts unchanged.
+   */
+  async solanaFulfillment(listing, fulfiller) {
+    const res = await this.#get(`/listings/fulfillment/actions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        listing: { hash: listing.hash, chain: this.chain, protocol_address: listing.protocolAddress },
+        fulfiller: { address: fulfiller },
+        recipient: fulfiller,
+      }),
+    });
+    const txs = [];
+    const visit = (node) => {
+      if (!node || typeof node !== "object") return;
+      for (const [k, v] of Object.entries(node)) {
+        if (/partially_?signed_?transaction|serialized_?transaction|transaction_?base64/i.test(k) && typeof v === "string") txs.push(v);
+        else visit(v);
+      }
+    };
+    visit(res.steps);
+    if (!txs.length) throw new Error("OpenSea returned no signed Solana transaction for this listing");
+    return txs;
+  }
+
   /** Returns { to, value, data } for filling `listing` with `fulfiller` as the buyer. */
   async fulfillment(listing, fulfiller) {
     const res = await this.#get(`/listings/fulfillment_data`, {

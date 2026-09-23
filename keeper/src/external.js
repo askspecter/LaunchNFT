@@ -1,7 +1,7 @@
 // Keeper flow for coins whose collection lives on another chain (Ethereum, Base, Hyperliquid, Solana).
 //
 // Per external vault, each pass:
-//   1. price the cheapest listing on the target chain, in ETH (via a Relay quote for HYPE/SOL);
+//   1. price the cheapest OpenSea listing on the target chain, in ETH (via a Relay quote for HYPE/SOL);
 //   2. if the vault can afford it and nothing is in flight, announce a withdrawal (1h delay,
 //      cancellable by the registry owner);
 //   3. once ready, execute it and bridge the ETH to the keeper's wallet on the target chain;
@@ -53,7 +53,7 @@ export const TARGETS = {
 
 export class ExternalKeeper {
   /**
-   * deps: { cfg, client (Robinhood public), account, send(label, req), opensea, magiceden, solana,
+   * deps: { cfg, client (Robinhood public), account, send(label, req), opensea, solana,
    *         collections: [{chainId,address,name,slug}], bridge (optional override for tests),
    *         targetClients (optional override: chainId -> { public, wallet }) }
    */
@@ -103,7 +103,8 @@ export class ExternalKeeper {
     const t = TARGETS[l.chainId];
     let listing;
     if (t.solana) {
-      [listing] = await this.magiceden.bestListings(meta.slug);
+      [listing] = await this.opensea.forChain("solana").bestListingsBySlug(meta.slug);
+      if (listing && !listing.mint) return warn(`#${l.id} OpenSea listing has no mint address — skipping`), null;
       if (listing) listing.tokenId = BigInt(this.solana.toBytes32(listing.mint));
     } else {
       [listing] = await this.opensea.forChain(t.opensea).bestListings(meta.address);
@@ -192,7 +193,7 @@ export class ExternalKeeper {
     const t = TARGETS[l.chainId];
     let txId;
     if (t.solana) {
-      txId = await this.solana.buy(listing, this.magiceden, this.cfg.dryRun);
+      txId = await this.solana.buy(listing, this.opensea.forChain("solana"), this.cfg.dryRun);
       if (!txId) return;
       if (l.policy === "burn") await this.solana.burn(listing.mint, this.cfg.dryRun);
     } else {

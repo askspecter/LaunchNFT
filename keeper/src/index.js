@@ -7,7 +7,6 @@ import { launcherAbi, routerAbi, vaultAbi, rafflesAbi, erc721Abi, arbSysAbi, ARB
 import { OpenSea, RateLimited } from "./opensea.js";
 import { serveSnapshots } from "./server.js";
 import { ExternalKeeper } from "./external.js";
-import { MagicEden } from "./magiceden.js";
 import { balancesAt, buildSnapshot, winnerOf } from "./snapshot.js";
 import { log, warn } from "./log.js";
 
@@ -37,7 +36,6 @@ async function makeExternal() {
     : {};
   return new ExternalKeeper({
     cfg, client, wallet, account, send, opensea, collections, solana, ...hooks,
-    magiceden: new MagicEden({ apiKey: cfg.magicedenApiKey }),
     receipts: (l, tokenId, sig) => appendReceipt({ vault: l.vault, chainId: l.chainId, tokenId: tokenId.toString(), signature: sig }),
   });
 }
