@@ -1,4 +1,4 @@
-import { $, esc, live, toast, renderChrome, listedCollectionsDetailed, loadLaunches, addrLink, eth, chainBadge, ROBINHOOD, CONFIG } from "../lib.js";
+import { $, esc, live, toast, renderChrome, listedCollectionsDetailed, loadLaunches, addrLink, eth, chainBadge, ROBINHOOD, CONFIG, collectionLogo } from "../lib.js";
 
 renderChrome("collections.html");
 
@@ -14,8 +14,9 @@ async function render() {
   rows.sort((a, b) => (b.eth > a.eth ? 1 : -1));
   const cell = (r) => {
     const chain = CONFIG.chains[r.chainId];
-    if (r.chainId === ROBINHOOD) return `${addrLink(r.address, r.name)} ${chainBadge(r.chainId)}`;
-    return `<a class="mono" href="${chain.explorer}/address/${r.address}" target="_blank" rel="noopener">${esc(r.name)}</a> ${chainBadge(r.chainId)}`;
+    const logo = collectionLogo(r.name, r.image, 28);
+    if (r.chainId === ROBINHOOD) return `<span class="collects">${logo}${addrLink(r.address, r.name)} ${chainBadge(r.chainId)}</span>`;
+    return `<span class="collects">${logo}<a class="mono" href="${chain.explorer}/address/${r.address}" target="_blank" rel="noopener">${esc(r.name)}</a> ${chainBadge(r.chainId)}</span>`;
   };
   body.innerHTML = rows.map((r) => `<tr><td>${cell(r)}</td><td>${r.coins}</td><td>${eth(r.eth)}</td><td>${r.nfts}</td></tr>`).join("");
 }

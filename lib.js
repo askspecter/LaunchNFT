@@ -26,6 +26,14 @@ export function chainIcon(id) {
   return c?.icon ? `<img class="chain-icon" src="${c.icon}" alt="" width="16" height="16" />` : "";
 }
 
+/** Collection logo (from collections.json), or a coloured initial when there is none. */
+export function collectionLogo(name, image, size = 44) {
+  const style = `width:${size}px;height:${size}px`;
+  const initial = `<span class="col-logo col-logo-fallback" style="${style};background:${colorFor(name || "?")}">${esc((name || "?").slice(0, 1))}</span>`;
+  if (!image) return initial;
+  return `<img class="col-logo" style="${style}" src="${esc(image)}" alt="" loading="lazy" onerror="this.outerHTML=this.dataset.fallback" data-fallback="${esc(initial)}" />`;
+}
+
 /** Logo + name pill, e.g. for coin cards and collection rows. */
 export const chainBadge = (id) => `<span class="pill-chain">${chainIcon(id)}${esc(chainName(id))}</span>`;
 
@@ -263,6 +271,8 @@ async function nameFor(meta, collection) {
   return read(collection, ABI.erc721, "name").catch(() => short(collection));
 }
 
+const imageFor = (meta, collection) => meta.get(getAddress(collection))?.image || null;
+
 /** Full view of one launch. `id` is a number for Robinhood coins, "e<n>" for other chains. */
 export async function loadLaunch(id) {
   if (String(id).startsWith("e")) return loadExternalLaunch(Number(String(id).slice(1)));
@@ -279,7 +289,7 @@ export async function loadLaunch(id) {
   ]);
   return {
     id: Number(id), chainId: ROBINHOOD, external: false, token, curve, router, vault, collection, creator,
-    name, symbol, collectionName, vaultBalance, nfts: Number(nfts), pending, policy: POLICIES[policy],
+    name, symbol, collectionName, collectionImage: imageFor(meta, collection), vaultBalance, nfts: Number(nfts), pending, policy: POLICIES[policy],
   };
 }
 
@@ -299,7 +309,7 @@ export async function loadExternalLaunch(n) {
   const m = meta.get(getAddress(collection));
   return {
     id: `e${n}`, chainId: Number(chainId), external: true, isEvm, token, curve, router, vault, collection, creator,
-    name, symbol, collectionName: m?.name || `${chainName(chainId)} collection`, collectionAddress: m?.address,
+    name, symbol, collectionName: m?.name || `${chainName(chainId)} collection`, collectionAddress: m?.address, collectionImage: m?.image || null,
     vaultBalance, pending, policy: POLICIES[policy], nfts: buys.length,
     withdrawn, spent, pendingAmount, pendingReadyAt: Number(pendingReadyAt),
     purchases: buys.map((b) => ({ tokenId: b.args.tokenId, price: b.args.price, externalTx: b.args.externalTx })),
@@ -361,7 +371,7 @@ export async function listedCollectionsDetailed() {
   const [keys, meta] = await Promise.all([listedCollections(), metaByKey()]);
   return Promise.all(keys.map(async (key) => {
     const m = meta.get(key);
-    if (m) return { key, chainId: Number(m.chainId), address: m.address, name: m.name, slug: m.slug };
+    if (m) return { key, chainId: Number(m.chainId), address: m.address, name: m.name, slug: m.slug, image: m.image };
     // Unknown key: a Robinhood collection not in collections.json yet (other-chain keys need metadata).
     const name = await read(key, ABI.erc721, "name").catch(() => null);
     return name ? { key, chainId: ROBINHOOD, address: key, name } : null;
@@ -379,7 +389,7 @@ export function coinCard(c) {
     <div class="body">
       <h4>${esc(c.name)} <small>${esc(c.policy || "")}</small></h4>
       ${chainBadge(c.chainId || ROBINHOOD)}
-      <div class="meta"><span>Collects <b>${esc(c.collectionName)}</b></span></div>
+      <div class="meta"><span class="collects">Collects ${collectionLogo(c.collectionName, c.collectionImage, 18)}<b>${esc(c.collectionName)}</b></span></div>
       <div class="meta"><span>Vault <b>${eth(c.vaultBalance)} ETH</b></span><span><b>${c.nfts}</b> NFTs</span></div>
     </div>
   </${href ? "a" : "article"}>`;

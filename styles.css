@@ -299,3 +299,8 @@ a.coin { display: block; }
 .chip { display: inline-flex; align-items: center; gap: 6px; }
 .chip .chain-icon { width: 18px; height: 18px; }
 .pv-rows .chain-icon { vertical-align: -3px; margin-left: 4px; }
+.col-logo { border-radius: 12px; object-fit: cover; flex: none; background: var(--line); display: inline-grid; place-items: center; }
+.col-logo-fallback { color: #fff; font-weight: 700; font-size: 14px; }
+.collects { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.collects .col-logo { border-radius: 6px; }
+.coin .meta .collects b { margin-left: 0; }

@@ -1,7 +1,7 @@
 import {
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, walletClient, getAccount, connect,
   listedCollectionsDetailed, loadLaunches, colorFor, eth, toHex, short, chainName, ROBINHOOD,
-  externalLive, collectionId, chainIcon, chainBadge, chainIdByName,
+  externalLive, collectionId, chainIcon, chainBadge, chainIdByName, collectionLogo,
 } from "../lib.js";
 import { parseAbi, zeroAddress, encodeFunctionData } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
@@ -86,7 +86,7 @@ function renderPreview() {
   $("#preview").innerHTML = `
     <div class="pv-head">${img}<div><b>${esc(name)}</b><span class="mono">$${esc(symbol)}</span></div></div>
     <dl class="pv-rows">
-      <dt>Collects</dt><dd>${state.collection ? `${esc(state.collection.name)} ${chainIcon(state.collection.chainId)}` : "—"}</dd>
+      <dt>Collects</dt><dd>${state.collection ? `<span class="collects">${collectionLogo(state.collection.name, state.collection.image, 18)}${esc(state.collection.name)} ${chainIcon(state.collection.chainId)}</span>` : "—"}</dd>
       <dt>NFTs</dt><dd>${POLICY_NAMES[policy()]}</dd>
       <dt>Creator tax</dt><dd>${(Number(taxBps()) / 100).toFixed(2)}%</dd>
       <dt>Supply</dt><dd>${state.pons ? Number(state.pons.supply / 10n ** 18n).toLocaleString() : "…"}</dd>
@@ -115,7 +115,7 @@ function renderCollections() {
     (state.chain === "all" || c.chain === state.chain) && (!q || c.name.toLowerCase().includes(q) || c.address.toLowerCase().includes(q)));
   $("#colList").innerHTML = rows.length ? rows.map((c) => `
     <button class="col${state.collection?.key === c.key ? " selected" : ""}" data-key="${c.key}">
-      <span class="col-avatar" style="background:${colorFor(c.name)}">${esc(c.name.slice(0, 1))}</span>
+      ${collectionLogo(c.name, c.image, 44)}
       <span class="col-main"><b>${esc(c.name)}</b><small class="mono">${short(c.address)}</small>
         <span class="col-meta">${chainBadge(c.chainId)}${c.coins} coin${c.coins === 1 ? "" : "s"} · ${eth(c.vaultEth, 4)} ETH in vaults</span></span>
       <span class="radio"></span>
@@ -126,7 +126,7 @@ function renderSummary() {
   const rows = [
     ["Name", esc(val("name"))],
     ["Ticker", `$${esc(val("symbol").toUpperCase())}`],
-    ["Collects", state.collection ? `${esc(state.collection.name)} ${chainBadge(state.collection.chainId)}` : "—"],
+    ["Collects", state.collection ? `<span class="collects">${collectionLogo(state.collection.name, state.collection.image, 20)}${esc(state.collection.name)} ${chainBadge(state.collection.chainId)}</span>` : "—"],
     ["NFTs", POLICY_NAMES[policy()]],
     ["Creator tax", `${(Number(taxBps()) / 100).toFixed(2)}%`],
   ];

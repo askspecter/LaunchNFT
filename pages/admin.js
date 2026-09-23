@@ -286,7 +286,8 @@ $("#listExternal").addEventListener("click", async () => {
     await extCollectionCheck(chainId, address);
     const key = collectionKey(chainId, address);
     await registryWrite(`List ${name}`, "setCollection", [key, true]);
-    const entry = { chainId, address: getAddress(address), name, slug };
+    const image = $("#extImage").value.trim();
+    const entry = { chainId, address: getAddress(address), name, slug, ...(image ? { image } : {}) };
     $("#extSnippet").hidden = false;
     $("#extSnippet").textContent = JSON.stringify(entry, null, 2) + ",";
   } catch (err) {
