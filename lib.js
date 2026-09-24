@@ -354,6 +354,7 @@ export function renderChrome(active) {
         </form>
         ${NAV.map(([href, label]) => `<a href="${href}"${href === active ? ' class="active"' : ""}>${label}</a>`).join("")}
         <div class="menu-foot">
+          ${CONFIG.token?.address ? `<a class="menu-token" href="https://www.ponsfamily.com/launchpad/${CONFIG.token.address}" target="_blank" rel="noopener"><img src="assets/brand/favicon-64.png" alt="" width="20" height="20" /><b>$${esc(CONFIG.token.symbol)}</b><span class="mono">${short(CONFIG.token.address)}</span><em>Buy ↗</em></a>` : ""}
           ${CONFIG.x ? `<a class="x-link" href="https://x.com/${esc(CONFIG.x)}" target="_blank" rel="noopener">${ICONS.x}<span>@${esc(CONFIG.x)}</span></a>` : ""}
           <a class="btn btn-dark menu-btn" href="launch.html">${ICONS.rocket}Launch a coin</a>
           <button class="btn btn-ghost menu-btn" data-connect>${ICONS.wallet}<span>Connect wallet</span></button>

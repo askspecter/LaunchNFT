@@ -253,6 +253,7 @@
     wireCopy();
 
     const rows = [
+      ...(CONFIG.token?.address ? [[`$${CONFIG.token.symbol} token`, CONFIG.token.address, "The official Olka token, traded on Pons"]] : []),
       ["Launcher", CONFIG.launcher, "Creates coins that collect Robinhood Chain collections"],
       ["External launcher", CONFIG.externalLauncher, "Creates coins that collect on Ethereum, Base, Hyperliquid and Solana"],
       ["Pons V2 factory", CONFIG.ponsFactory, "Pons, where every coin is launched and traded"],

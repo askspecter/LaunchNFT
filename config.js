@@ -22,6 +22,7 @@ export const CONFIG = {
   collectionsUrl: "collections.json", // names + marketplace slugs for listed collections
   hiddenLaunches: ["0"], // launch ids kept off the site's lists (the contracts still run them)
   x: "olkadotapp", // X / Twitter handle shown in the menu
+  token: { symbol: "OLKA", address: "0xE1b408401a5D9B8D8c3e56D697B6Bd5469c4fd87" }, // official $OLKA on Pons
   // Reown (WalletConnect) Project ID from https://cloud.reown.com. Public by design.
   // Empty = fall back to the browser's injected wallet only.
   reownProjectId: "5c559ec7c86f657976f14d599d5e66b5",

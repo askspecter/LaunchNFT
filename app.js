@@ -137,6 +137,21 @@ $("#top").addEventListener("click", (e) => {
   rail.scrollBy({ left: Number(b.dataset.dir) * rail.clientWidth * 0.85, behavior: "smooth" });
 });
 
+/** Official $OLKA card: contract, copy button and trading links. */
+function renderToken() {
+  const tk = CONFIG.token;
+  if (!tk?.address) return $("#olka-token")?.remove();
+  $("#olkaCa").textContent = tk.address;
+  $("#olkaBuy").href = `https://www.ponsfamily.com/launchpad/${tk.address}`;
+  $("#olkaChart").href = `https://www.geckoterminal.com/robinhood/tokens/${tk.address.toLowerCase()}`;
+  $("#olkaExplorer").href = `${CONFIG.explorer}/token/${tk.address}`;
+  $("#olkaCopy").addEventListener("click", async (e) => {
+    try { await navigator.clipboard.writeText(tk.address); e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy"), 1600); }
+    catch { toast(tk.address); }
+  });
+}
+
+renderToken();
 renderRules();
 renderFloors().catch(() => ($("#rail").innerHTML = `<p class="empty">Floor prices are not available right now.</p>`));
 if (location.hash === "#launch") location.replace("launch.html");
