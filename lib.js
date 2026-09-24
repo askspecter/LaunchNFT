@@ -176,7 +176,7 @@ export async function connect() {
     });
   }
   account = getAddress(acc);
-  document.querySelectorAll("[data-connect]").forEach((b) => (b.textContent = short(account)));
+  document.querySelectorAll("[data-connect]").forEach((b) => (($("span", b) || b).textContent = short(account)));
   listeners.forEach((fn) => fn(account));
   return account;
 }
@@ -208,25 +208,45 @@ const NAV = [
   ["docs.html", "Docs"],
 ];
 
+const ICONS = {
+  menu: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  close: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  x: '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+  rocket: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.1 2.1 0 0 0-2.9-.1z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.9A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.5-6 11a22 22 0 0 1-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"/></svg>',
+  wallet: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>',
+};
+
 export function renderChrome(active) {
   const header = $("#site-header");
   if (header) {
     header.className = "nav";
+    const q = active === "collections.html" ? new URLSearchParams(location.search).get("q") || "" : "";
     header.innerHTML = `
+      <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false">${ICONS.menu}</button>
       <a href="index.html" class="brand" aria-label="Olka home"><img src="assets/brand/olka-logo.png" alt="Olka" width="40" height="40" /></a>
       <nav class="nav-links" id="navLinks">
         <form class="nav-search" action="collections.html" role="search">
-          <input name="q" type="search" placeholder="Search collections" aria-label="Search collections" value="${esc(active === "collections.html" ? new URLSearchParams(location.search).get("q") || "" : "")}" />
+          <input name="q" type="search" placeholder="Search collections" aria-label="Search collections" value="${esc(q)}" />
         </form>
         ${NAV.map(([href, label]) => `<a href="${href}"${href === active ? ' class="active"' : ""}>${label}</a>`).join("")}
-      </nav>
-      <div class="nav-actions">
-        <button class="btn btn-ghost" data-connect>Connect</button>
-        <a class="btn btn-dark" href="launch.html">Launch</a>
-        <button class="burger" id="burger" aria-label="Menu">☰</button>
-      </div>`;
+        <div class="menu-foot">
+          ${CONFIG.x ? `<a class="x-link" href="https://x.com/${esc(CONFIG.x)}" target="_blank" rel="noopener">${ICONS.x}<span>@${esc(CONFIG.x)}</span></a>` : ""}
+          <a class="btn btn-dark menu-btn" href="launch.html">${ICONS.rocket}Launch a coin</a>
+          <button class="btn btn-ghost menu-btn" data-connect>${ICONS.wallet}<span>Connect wallet</span></button>
+        </div>
+      </nav>`;
+    const burger = $("#burger", header);
+    const menu = $("#navLinks", header);
+    const setOpen = (open) => {
+      menu.classList.toggle("open", open);
+      burger.setAttribute("aria-expanded", String(open));
+      burger.innerHTML = open ? ICONS.close : ICONS.menu;
+    };
+    burger.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!menu.classList.contains("open")); });
+    document.addEventListener("click", (e) => { if (!header.contains(e.target)) setOpen(false); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
     $("[data-connect]", header).addEventListener("click", () => connect().catch((e) => toast(e.shortMessage || e.message)));
-    $("#burger", header).addEventListener("click", () => $("#navLinks").classList.toggle("open"));
+    if (account) $("[data-connect] span", header).textContent = short(account);
   }
   const footer = $("#site-footer");
   if (footer) {
@@ -371,7 +391,8 @@ export async function loadLaunches(limit = 60) {
     const n = Number(await read(CONFIG.externalLauncher, ABI.extLauncher, "launchCount"));
     ext = [...Array(Math.min(n, limit)).keys()].map((i) => `e${n - 1 - i}`);
   }
-  return Promise.all([...ids, ...ext].map(loadLaunch));
+  const hidden = new Set((CONFIG.hiddenLaunches || []).map(String));
+  return Promise.all([...ids, ...ext].filter((id) => !hidden.has(String(id))).map(loadLaunch));
 }
 
 /** Explorer link for a transaction on an EVM chain. Solana signatures (64 bytes) do not fit the

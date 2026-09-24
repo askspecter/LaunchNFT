@@ -20,4 +20,6 @@ export const CONFIG = {
     792703809: { name: "Solana", evm: false, currency: "SOL", explorer: "https://solscan.io", icon: "assets/chains/solana.jpg" },
   },
   collectionsUrl: "collections.json", // names + marketplace slugs for listed collections
+  hiddenLaunches: ["0"], // launch ids kept off the site's lists (the contracts still run them)
+  x: "olkadotapp", // X / Twitter handle shown in the menu
 };
