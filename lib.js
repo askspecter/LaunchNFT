@@ -233,7 +233,6 @@ export function renderChrome(active) {
     footer.className = "footer";
     footer.innerHTML = `
       <div>
-        <a href="index.html" class="brand" aria-label="Olka home"><img src="assets/brand/olka-logo.png" alt="Olka" width="40" height="40" /></a>
         <p>Pons coins on Robinhood Chain whose creator fees buy NFT floors. Vault rules are enforced on-chain.</p>
       </div>
       <div class="foot-links">${NAV.map(([h, l]) => `<a href="${h}">${l}</a>`).join("")}</div>

@@ -646,3 +646,18 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .c-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .c-label b { flex: none; }
 @media (max-width: 520px) { .c-label { left: 14px; right: 14px; bottom: 14px; font-size: 11px; padding: 7px 9px; } }
+
+/* tidy: nav covers content scrolling above it, calmer rules strip, lighter footer */
+.nav::before {
+  content: ""; position: absolute; left: -10px; right: -10px; top: -12px; height: 12px; z-index: -1;
+  background: rgba(246, 245, 251, 0.9); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.rule { font-family: "Sora", sans-serif; min-width: 190px; padding: 12px 16px; }
+.rule small { font-size: 10px; font-weight: 700; letter-spacing: .14em; }
+.rule span { font-size: 13px; font-weight: 500; }
+.marquee { padding: 8px 0 0; }
+.footer { margin-top: 72px; padding-top: 28px; grid-template-columns: 1fr; gap: 16px; }
+.footer p { margin: 0; font-size: 14px; }
+.foot-links { gap: 12px 20px; }
+.nav { background: rgba(252, 251, 255, 0.97); }
+.nav::before { background: rgba(246, 245, 251, 0.97); top: -14px; height: 14px; }
