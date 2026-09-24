@@ -1,6 +1,6 @@
 import { $, esc, live, toast, renderChrome, listedCollectionsDetailed, loadLaunches, addrLink, eth, chainBadge, ROBINHOOD, CONFIG, collectionLogo } from "../lib.js";
 
-renderChrome("collections.html");
+renderChrome("collections");
 
 async function render() {
   const body = $("#table tbody");
@@ -29,7 +29,7 @@ async function render() {
     const shown = rows.filter((r) => (chain === "all" || String(r.chainId) === chain)
       && (!term || r.name.toLowerCase().includes(term) || String(r.address).toLowerCase().includes(term) || (r.slug || "").includes(term)));
     body.innerHTML = shown.length
-      ? shown.map((r) => `<tr><td>${cell(r)}</td><td>${r.coins ? r.coins : `<a class="btn btn-ghost btn-sm" href="launch.html?collection=${encodeURIComponent(r.key)}">Launch a coin</a>`}</td><td>${eth(r.eth)}</td><td>${r.nfts}</td></tr>`).join("")
+      ? shown.map((r) => `<tr><td>${cell(r)}</td><td>${r.coins ? r.coins : `<a class="btn btn-ghost btn-sm" href="launch?collection=${encodeURIComponent(r.key)}">Launch a coin</a>`}</td><td>${eth(r.eth)}</td><td>${r.nfts}</td></tr>`).join("")
       : `<tr><td colspan="4" class="empty">No collection matches “${esc(q.value)}”.</td></tr>`;
   };
   q.addEventListener("input", draw);

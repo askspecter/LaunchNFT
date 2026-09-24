@@ -10,7 +10,7 @@
   <meta property="og:site_name" content="Olka" />
   <meta property="og:title" content="How Olka works" />
   <meta property="og:description" content="Everything about Olka: launching, fees, vaults, giveaways, other chains, contracts and risks." />
-  <meta property="og:url" content="https://olka.app/docs.html" />
+  <meta property="og:url" content="https://olka.app/docs" />
   <meta property="og:image" content="https://olka.app/assets/brand/og.jpg" />
   <meta property="og:image:width" content="2400" />
   <meta property="og:image:height" content="1260" />
@@ -88,7 +88,7 @@
 
         <section id="launch">
           <h2><span>03</span> Launching a coin</h2>
-          <p>The <a href="launch.html">Launch</a> page walks you through four short steps. Nothing is sent until you confirm the final transaction in your wallet.</p>
+          <p>The <a href="launch">Launch</a> page walks you through four short steps. Nothing is sent until you confirm the final transaction in your wallet.</p>
           <div class="steps4">
             <div><i>Step 1</i><b>Your coin</b><p>Name, ticker and image. You can upload a picture straight from your phone; it is resized and stored for you, and Pons saves it with the coin. Add a description and links if you like.</p></div>
             <div><i>Step 2</i><b>Collection</b><p>Choose which NFT collection the coin will collect. Search by name or filter by chain. Every listed collection is active and tradable on OpenSea.</p></div>
@@ -130,7 +130,7 @@
             <li>It rejects NFTs from any other collection.</li>
             <li>There is <b>no withdraw function</b>. ETH leaves only as payment for NFTs.</li>
           </ul>
-          <p>You can watch every vault live: its balance, each harvest, each purchase and each giveaway appear on the coin page and in <a href="activity.html">Activity</a>, read straight from the chain.</p>
+          <p>You can watch every vault live: its balance, each harvest, each purchase and each giveaway appear on the coin page and in <a href="activity">Activity</a>, read straight from the chain.</p>
         </section>
 
         <section id="policies">
@@ -150,7 +150,7 @@
             <li><b>Public window, 15 minutes</b><p>The snapshot must be public for 15 minutes before a draw can start, so anyone can verify it.</p></li>
             <li><b>Commit</b><p>Anyone calls <code>commitDraw</code>, which pins a Robinhood Chain block 20 blocks in the future. Nobody can know that block's hash yet.</p></li>
             <li><b>Draw</b><p>Once the block exists, anyone calls <code>draw</code>. The winning ticket is derived from that block's hash. If nobody draws within 256 blocks, the commit simply resets and is tried again.</p></li>
-            <li><b>Delivery</b><p>The keeper delivers the NFT to the winner using the winner's Merkle proof. Winners can also claim it themselves on the <a href="claims.html">Giveaways</a> page.</p></li>
+            <li><b>Delivery</b><p>The keeper delivers the NFT to the winner using the winner's Merkle proof. Winners can also claim it themselves on the <a href="claims">Giveaways</a> page.</p></li>
           </ol>
           <div class="callout">
             <b>Won an NFT on Solana?</b>
@@ -249,7 +249,7 @@
   <script type="module">
     import { CONFIG, renderChrome, isAddress, client, ABI, collectionMeta, eth } from "./lib.js";
     import { wireCopy, copyBtn } from "./feed.js";
-    renderChrome("docs.html");
+    renderChrome("docs");
     wireCopy();
 
     const rows = [

@@ -1,7 +1,7 @@
 import { $, esc, eth, live, renderChrome, loadLaunches, chainBadge, collectionLogo, CONFIG, ROBINHOOD } from "../lib.js";
 import { loadActivity, summarize } from "../feed.js";
 
-renderChrome("analytics.html");
+renderChrome("analytics");
 
 async function render() {
   if (!live) return ($("#totals").innerHTML = `<p class="empty">Contracts not deployed yet.</p>`);
@@ -34,7 +34,7 @@ async function render() {
     .slice(0, 20);
   $("#top tbody").innerHTML = top.length
     ? top.map(({ l, s }) => `<tr>
-        <td><a href="coin.html?id=${l.id}"><b>$${esc(l.symbol)}</b></a></td>
+        <td><a href="coin?id=${l.id}"><b>$${esc(l.symbol)}</b></a></td>
         <td><span class="collects">${collectionLogo(l.collectionName, l.collectionImage, 20)}${esc(l.collectionName)}</span></td>
         <td>${eth(s.harvested, 5)}</td><td>${s.bought}</td><td>${s.given}</td></tr>`).join("")
     : `<tr><td colspan="5" class="empty">No coins yet.</td></tr>`;

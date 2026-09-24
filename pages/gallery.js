@@ -5,7 +5,7 @@ import {
 } from "../lib.js";
 import { loadActivity } from "../feed.js";
 
-renderChrome("gallery.html");
+renderChrome("gallery");
 
 const uriAbi = parseAbi(["function tokenURI(uint256) view returns (string)"]);
 const clients = { [ROBINHOOD]: client };

@@ -322,13 +322,13 @@ export async function write(req) {
 // ------------------------------------------------------------------ layout
 
 const NAV = [
-  ["explore.html", "Coins"],
-  ["collections.html", "Collections"],
-  ["gallery.html", "Gallery"],
-  ["activity.html", "Activity"],
-  ["claims.html", "Giveaways"],
-  ["analytics.html", "Analytics"],
-  ["docs.html", "Docs"],
+  ["explore", "Coins"],
+  ["collections", "Collections"],
+  ["gallery", "Gallery"],
+  ["activity", "Activity"],
+  ["claims", "Giveaways"],
+  ["analytics", "Analytics"],
+  ["docs", "Docs"],
 ];
 
 const ICONS = {
@@ -343,19 +343,19 @@ export function renderChrome(active) {
   const header = $("#site-header");
   if (header) {
     header.className = "nav";
-    const q = active === "collections.html" ? new URLSearchParams(location.search).get("q") || "" : "";
+    const q = active === "collections" ? new URLSearchParams(location.search).get("q") || "" : "";
     header.innerHTML = `
       <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false">${ICONS.menu}</button>
-      <a href="index.html" class="brand" aria-label="Olka home"><img src="assets/brand/olka-logo.png" alt="Olka" width="40" height="40" /></a>
+      <a href="/" class="brand" aria-label="Olka home"><img src="assets/brand/olka-logo.png" alt="Olka" width="40" height="40" /></a>
       <nav class="nav-links" id="navLinks">
-        <form class="nav-search" action="collections.html" role="search">
+        <form class="nav-search" action="collections" role="search">
           <input name="q" type="search" placeholder="Search collections" aria-label="Search collections" value="${esc(q)}" />
         </form>
         ${NAV.map(([href, label]) => `<a href="${href}"${href === active ? ' class="active"' : ""}>${label}</a>`).join("")}
         <div class="menu-foot">
           ${CONFIG.token?.address ? `<a class="menu-token" href="https://www.ponsfamily.com/launchpad/${CONFIG.token.address}" target="_blank" rel="noopener"><img src="assets/brand/favicon-64.png" alt="" width="20" height="20" /><b>$${esc(CONFIG.token.symbol)}</b><span class="mono">${short(CONFIG.token.address)}</span><em>Buy ↗</em></a>` : ""}
           ${CONFIG.x ? `<a class="x-link" href="https://x.com/${esc(CONFIG.x)}" target="_blank" rel="noopener">${ICONS.x}<span>@${esc(CONFIG.x)}</span></a>` : ""}
-          <a class="btn btn-dark menu-btn" href="launch.html">${ICONS.rocket}Launch a coin</a>
+          <a class="btn btn-dark menu-btn" href="launch">${ICONS.rocket}Launch a coin</a>
           <button class="btn btn-ghost menu-btn" data-connect>${ICONS.wallet}<span>Connect wallet</span></button>
         </div>
       </nav>`;
@@ -584,7 +584,7 @@ export function coinArt(c, cls) {
 }
 
 export function coinCard(c) {
-  const href = c.id != null ? `coin.html?id=${c.id}` : null;
+  const href = c.id != null ? `coin?id=${c.id}` : null;
   const tag = href ? `a href="${href}"` : "article";
   return `<${tag} class="coin">
     ${coinArt(c, "art")}

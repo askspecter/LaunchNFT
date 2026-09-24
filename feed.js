@@ -135,7 +135,7 @@ export function mountFeed(el, items, { showCoin = false, limit = 60 } = {}) {
         <li class="feed-row k-${i.kind}">
           <span class="feed-icon" aria-hidden="true">${ICON[i.kind]}</span>
           <div class="feed-main">
-            <b>${i.title}${showCoin ? ` <a class="feed-coin" href="coin.html?id=${i.launch.id}">$${esc(i.launch.symbol)}</a>` : ""}</b>
+            <b>${i.title}${showCoin ? ` <a class="feed-coin" href="coin?id=${i.launch.id}">$${esc(i.launch.symbol)}</a>` : ""}</b>
             <span>${i.detail}</span>
           </div>
           <div class="feed-side">

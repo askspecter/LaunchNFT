@@ -1,7 +1,7 @@
 import { $, esc, live, renderChrome, loadLaunches } from "../lib.js";
 import { loadActivity, addTimes, mountFeed } from "../feed.js";
 
-renderChrome("activity.html");
+renderChrome("activity");
 
 async function render() {
   if (!live) return ($("#feed").innerHTML = `<p class="empty">Contracts not deployed yet.</p>`);

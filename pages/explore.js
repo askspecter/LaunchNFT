@@ -1,6 +1,6 @@
 import { $, live, toast, renderChrome, loadLaunches, coinCard, eth } from "../lib.js";
 
-renderChrome("explore.html");
+renderChrome("explore");
 let coins = [];
 let sort = "new";
 

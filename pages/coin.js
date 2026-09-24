@@ -6,7 +6,7 @@ import {
   loadActivity, addTimes, mountFeed, summarize, wireCopy, copyBtn, geckoPool, geckoEmbed, geckoPage, ponsPage,
 } from "../feed.js";
 
-renderChrome("explore.html");
+renderChrome("explore");
 wireCopy();
 const id = new URLSearchParams(location.search).get("id");
 
@@ -27,7 +27,7 @@ function addressRow(label, addr, href) {
 
 async function render() {
   if (!live) return ($("#coin").innerHTML = `<p class="empty">Contracts not deployed yet.</p>`);
-  if (id == null) return ($("#coin").innerHTML = `<p class="empty">No coin selected. <a href="explore.html">Explore coins</a>.</p>`);
+  if (id == null) return ($("#coin").innerHTML = `<p class="empty">No coin selected. <a href="explore">Explore coins</a>.</p>`);
 
   const l = await loadLaunch(id);
   document.title = `$${l.symbol} · Olka`;
@@ -49,22 +49,26 @@ async function render() {
 
   $("#coin").innerHTML = `
     <section class="coin-hero">
-      ${coinArt(l, "coin-badge")}
-      <div class="coin-hero-text">
-        <div class="coin-title-row">
+      <div class="ch-top">
+        ${coinArt(l, "coin-badge")}
+        <div class="ch-id">
           <h1 class="page-title">${esc(l.name)}</h1>
           <span class="ticker mono">$${esc(l.symbol)}</span>
         </div>
-        <p class="muted collects">Feeds ${collectionLogo(l.collectionName, l.collectionImage, 20)}<b>${esc(l.collectionName)}</b> ${chainBadge(chainId)} · ${l.policy === "Raffle" ? "NFTs go to holders" : l.policy === "Burn" ? "NFTs are burned" : "NFTs stay in the vault"}</p>
-        ${l.description ? `<p class="coin-desc">${esc(l.description)}</p>` : ""}
-        <div class="token-line">
-          <span class="mono">${l.token}</span>${copyBtn(l.token, "Copy")}
-        </div>
-        <div class="cta-left">
-          <a class="btn btn-dark" href="${ponsPage(l.token)}" target="_blank" rel="noopener">Buy / sell on Pons ↗</a>
-          <a class="btn btn-ghost" href="${geckoPage(pool)}" target="_blank" rel="noopener">GeckoTerminal ↗</a>
-          <a class="btn btn-ghost" href="${CONFIG.explorer}/token/${l.token}" target="_blank" rel="noopener">Explorer ↗</a>
-        </div>
+      </div>
+      <div class="ch-meta">
+        <span class="meta-chip">${collectionLogo(l.collectionName, l.collectionImage, 24)}<span>Feeds <b>${esc(l.collectionName)}</b></span></span>
+        ${chainBadge(chainId)}
+        <span class="meta-chip plain">${l.policy === "Raffle" ? "NFTs go to holders" : l.policy === "Burn" ? "NFTs are burned" : "NFTs stay in the vault"}</span>
+      </div>
+      ${l.description ? `<p class="coin-desc">${esc(l.description)}</p>` : ""}
+      <div class="token-line">
+        <span class="tl-label">CA</span><span class="mono">${l.token}</span>${copyBtn(l.token, "Copy")}
+      </div>
+      <div class="ch-actions">
+        <a class="btn btn-dark" href="${ponsPage(l.token)}" target="_blank" rel="noopener">Buy / sell on Pons ↗</a>
+        <a class="btn btn-ghost" href="${geckoPage(pool)}" target="_blank" rel="noopener">Chart ↗</a>
+        <a class="btn btn-ghost" href="${CONFIG.explorer}/token/${l.token}" target="_blank" rel="noopener">Explorer ↗</a>
       </div>
     </section>
 

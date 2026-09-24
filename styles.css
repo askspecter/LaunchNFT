@@ -887,3 +887,34 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .menu-token img { width: 20px; height: 20px; }
 .menu-token .mono { font-size: 12px; color: var(--muted); }
 .menu-token em { margin-left: auto; font-style: normal; font-weight: 600; font-size: 13px; color: var(--accent); }
+
+/* ================================================================ coin page hero, tidy */
+.coin-hero { display: grid; gap: 16px; max-width: 820px; margin-bottom: 30px; align-items: start; flex-wrap: nowrap; }
+.ch-top { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.ch-top .coin-badge, .coin-hero .ch-top .coin-badge { width: 96px; height: 96px; border-radius: 26px; font-size: 18px; flex: none; }
+.ch-id { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.ch-id .page-title { margin: 0; font-size: clamp(30px, 6.4vw, 48px); line-height: 1.04; overflow-wrap: anywhere; }
+.ch-id .ticker { font-size: 14px; padding: 5px 12px; }
+.ch-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.meta-chip, .ch-meta .pill-chain {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 5px 13px 5px 5px; border-radius: 99px;
+  background: rgba(255, 255, 255, 0.78); border: 1px solid var(--line); font-size: 14px; color: var(--ink); line-height: 1.25;
+}
+.meta-chip .col-logo { border-radius: 50%; }
+.meta-chip b { font-weight: 600; }
+.meta-chip.plain, .ch-meta .pill-chain { padding: 5px 13px; color: var(--muted); }
+.ch-meta .pill-chain .chain-icon { width: 18px; height: 18px; }
+.coin-hero .coin-desc { margin: 0; font-size: 16px; color: var(--body, #2d2a3d); }
+.coin-hero .token-line { display: flex; width: 100%; margin: 0; padding: 6px 6px 6px 8px; border-radius: 16px; gap: 10px; }
+.tl-label { font-size: 12px; font-weight: 700; color: var(--muted); background: rgba(123, 92, 255, 0.08); padding: 6px 9px; border-radius: 10px; flex: none; }
+.coin-hero .token-line .mono { flex: 1; min-width: 0; }
+.coin-hero .token-line .copy { padding: 8px 14px; border-radius: 12px; }
+.ch-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ch-actions .btn { padding: 13px 14px; justify-content: center; }
+.ch-actions .btn:first-child { grid-column: 1 / -1; }
+@media (min-width: 760px) {
+  .ch-top .coin-badge, .coin-hero .ch-top .coin-badge { width: 120px; height: 120px; border-radius: 30px; }
+  .ch-actions { grid-template-columns: 2fr 1fr 1fr; }
+  .ch-actions .btn:first-child { grid-column: auto; }
+}
+.coin-hero { grid-template-columns: minmax(0, 1fr); width: 100%; } .coin-hero > * { min-width: 0; }

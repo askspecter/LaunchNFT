@@ -3,7 +3,7 @@ import {
   loadSnapshot, winnerEntry, write, addrLink, getAddress, client, chainName, base58Decode, toHex,
 } from "../lib.js";
 
-renderChrome("claims.html");
+renderChrome("claims");
 let draws = [];
 
 async function loadDraws() {
@@ -33,7 +33,7 @@ function renderDraws() {
   const body = $("#draws tbody");
   body.innerHTML = draws.length
     ? draws.slice(0, 50).map((d) => `<tr>
-        <td><a href="coin.html?id=${d.launch.id}">$${esc(d.launch.symbol)}</a></td>
+        <td><a href="coin?id=${d.launch.id}">$${esc(d.launch.symbol)}</a></td>
         <td>#${d.tokenId}</td>
         <td>${d.claimed ? "Delivered" : d.drawn ? "Drawn" : "Open"}</td>
         <td>${d.winner ? addrLink(d.winner.account) : "—"}</td>

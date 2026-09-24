@@ -25,7 +25,7 @@ const SAMPLE = [
 let coins = live ? [] : SAMPLE;
 let currentSort = "new";
 
-renderChrome("index.html");
+renderChrome("index");
 
 function renderRules() {
   const html = RULES.map(([k, v]) => `<div class="rule"><small>${k}</small><span>${v}</span></div>`).join("");
@@ -112,7 +112,7 @@ function renderRail(items) {
           <div><dt>7d sales</dt><dd>${fmt(c.sales7d, 0)}</dd></div>
         </dl>
         <div class="p-actions">
-          ${key ? `<a class="btn btn-dark" href="launch.html?collection=${key}">Launch a coin</a>` : ""}
+          ${key ? `<a class="btn btn-dark" href="launch?collection=${key}">Launch a coin</a>` : ""}
           ${os && c.slug ? `<a class="btn btn-ghost" href="https://opensea.io/collection/${esc(c.slug)}" target="_blank" rel="noopener">OpenSea ↗</a>` : ""}
         </div>
       </div>
@@ -154,5 +154,5 @@ function renderToken() {
 renderToken();
 renderRules();
 renderFloors().catch(() => ($("#rail").innerHTML = `<p class="empty">Floor prices are not available right now.</p>`));
-if (location.hash === "#launch") location.replace("launch.html");
+if (location.hash === "#launch") location.replace("launch");
 refresh().catch((e) => toast("Could not load launches: " + (e.shortMessage || e.message)));

@@ -334,7 +334,7 @@ $("#launchBtn").addEventListener("click", async (e) => {
     }
     const count = await client.readContract({ address: target, abi, functionName: "launchCount" });
     toast("Launched!");
-    location.href = `coin.html?id=${external ? "e" : ""}${Number(count) - 1}`;
+    location.href = `coin?id=${external ? "e" : ""}${Number(count) - 1}`;
   } catch (err) {
     console.error(err);
     toast(friendlyError(err));
