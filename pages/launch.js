@@ -1,4 +1,5 @@
 import {
+  friendlyError,
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, walletClient, getAccount, connect,
   listedCollectionsDetailed, loadLaunches, colorFor, eth, toHex, short, chainName, ROBINHOOD,
   externalLive, collectionId, chainIcon, chainBadge, chainIdByName, collectionLogo,
@@ -289,6 +290,11 @@ $("#launchBtn").addEventListener("click", async (e) => {
   btn.disabled = true;
   try {
     const wallet = await walletClient();
+    if ((await wallet.getChainId().catch(() => CONFIG.chainId)) !== CONFIG.chainId) {
+      await wallet.switchChain({ id: CONFIG.chainId }).catch(() => {
+        throw new Error("Switch your wallet to Robinhood Chain and try again.");
+      });
+    }
     const [fee, economics] = await Promise.all([
       client.readContract({ address: CONFIG.ponsFactory, abi: ABI.pons, functionName: "launchFee" }),
       client.readContract({ address: CONFIG.ponsFactory, abi: ABI.pons, functionName: "previewLaunchEconomics", args: [0n, zeroAddress] }),
@@ -330,7 +336,8 @@ $("#launchBtn").addEventListener("click", async (e) => {
     toast("Launched!");
     location.href = `coin.html?id=${external ? "e" : ""}${Number(count) - 1}`;
   } catch (err) {
-    toast(err.shortMessage || err.message);
+    console.error(err);
+    toast(friendlyError(err));
     btn.textContent = `Launch $${val("symbol").toUpperCase()}`;
   } finally {
     btn.disabled = false;

@@ -852,3 +852,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 .nav .nav-links { left: 0; width: min(340px, 100%); }
+.toast {
+  width: max-content; max-width: min(560px, calc(100vw - 32px)); white-space: normal; overflow-wrap: anywhere;
+  text-align: center; line-height: 1.45; border-radius: 18px; padding: 12px 18px;
+}

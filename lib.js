@@ -138,11 +138,24 @@ export const eth = (wei, dp = 3) => Number(formatEther(wei)).toLocaleString(unde
 export const addrLink = (a, label) => `<a class="mono" href="${CONFIG.explorer}/address/${a}" target="_blank" rel="noopener">${esc(label || short(a))}</a>`;
 export const txLink = (h) => `${CONFIG.explorer}/tx/${h}`;
 
+/** A short, readable reason for a failed wallet or contract call (viem errors carry long dumps). */
+export function friendlyError(err) {
+  const raw = [err?.details, err?.shortMessage, err?.cause?.shortMessage, err?.cause?.message, err?.message]
+    .find((x) => typeof x === "string" && x.trim()) || "Something went wrong";
+  const text = raw.split("\n")[0].replace(/0x[0-9a-fA-F]{40,}/g, "…").trim();
+  if (/insufficient funds/i.test(raw)) return "Not enough ETH on Robinhood Chain for the launch fee plus gas.";
+  if (/out of gas|gas limit|intrinsic gas|gas required exceeds/i.test(raw)) return "Your wallet set the gas limit too low. Allow about 4,000,000 gas in the wallet's advanced settings and try again.";
+  if (/chain|network/i.test(raw) && /mismatch|does not match|unsupported|unrecognized|switch/i.test(raw)) return "Switch your wallet to Robinhood Chain and try again.";
+  return text.length > 180 ? `${text.slice(0, 177)}…` : text;
+}
+
 /** Closing the wallet window or rejecting a request is a choice, not an error: stay quiet. */
 const QUIET = /cancell?ed|user rejected|user denied|rejected the request|request rejected|user closed/i;
 
 export function toast(msg) {
   if (QUIET.test(String(msg))) return;
+  msg = String(msg).split("\n")[0].replace(/0x[0-9a-fA-F]{40,}/g, "…");
+  if (msg.length > 200) msg = `${msg.slice(0, 197)}…`;
   let t = $("#toast");
   if (!t) {
     t = document.createElement("div");
