@@ -1,6 +1,7 @@
 import {
-  live, $, esc, toast, renderChrome, loadLaunches, coinCard, formatEther, collectionMeta, collectionKey, chainBadge, CONFIG,
+  live, $, esc, toast, renderChrome, loadLaunches, coinCard, formatEther, collectionMeta, collectionKey, chainBadge, CONFIG, client,
 } from "./lib.js";
+import { parseAbi } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
 const RULES = [
   ["PAIRING", "locked at launch"],
@@ -151,7 +152,44 @@ function renderToken() {
   });
 }
 
+// ---------------------------------------------------------------- live $OLKA burn
+const DEAD = ["0x000000000000000000000000000000000000dEaD", "0x0000000000000000000000000000000000000000"];
+const ERC20 = parseAbi([
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+]);
+const INITIAL_SUPPLY = 10n ** 27n; // Pons launches mint 1,000,000,000 tokens
+const whole = (wei) => Number(wei / 10n ** 18n);
+const fmtTok = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n.toLocaleString(undefined, { maximumFractionDigits: 0 }));
+const ago = (sec) => { const d = Date.now() / 1000 - sec; return d < 3600 ? `${Math.max(1, Math.floor(d / 60))}m ago` : d < 86400 ? `${Math.floor(d / 3600)}h ago` : `${Math.floor(d / 86400)}d ago`; };
+
+async function renderBurn() {
+  const tk = CONFIG.token;
+  if (!tk?.address) return;
+  const read = (functionName, args) => client.readContract({ address: tk.address, abi: ERC20, functionName, args });
+  const [supply, ...held] = await Promise.all([read("totalSupply"), ...DEAD.map((a) => read("balanceOf", [a]))]);
+  const burned = held.reduce((t, x) => t + x, 0n) + (INITIAL_SUPPLY > supply ? INITIAL_SUPPLY - supply : 0n);
+  const pct = Number((burned * 1_000_000n) / INITIAL_SUPPLY) / 10_000;
+  $("#burnAmt").textContent = fmtTok(whole(burned));
+  $("#burnPct").textContent = `${pct.toFixed(pct < 1 ? 3 : 2)}%`;
+  $("#burnCirc").textContent = fmtTok(whole(supply - held.reduce((t, x) => t + x, 0n)));
+  $("#burnBar").style.width = `${Math.min(100, Math.max(pct, 0.6))}%`;
+
+  const logs = await client.getLogs({
+    address: tk.address, event: ERC20.find((x) => x.name === "Transfer"), args: { to: DEAD },
+    fromBlock: BigInt(CONFIG.startBlock || 0), toBlock: "latest",
+  }).catch(() => []);
+  const recent = logs.slice(-5).reverse();
+  const times = await Promise.all(recent.map((l) => client.getBlock({ blockNumber: l.blockNumber }).then((b) => Number(b.timestamp)).catch(() => 0)));
+  $("#burnList").innerHTML = recent.length
+    ? recent.map((l, i) => `<li><span class="flame sm" aria-hidden="true"></span><b>${fmtTok(whole(l.args.value))} $OLKA</b><span class="muted">${times[i] ? ago(times[i]) : ""}</span><a class="mono" href="${CONFIG.explorer}/tx/${l.transactionHash}" target="_blank" rel="noopener">tx ↗</a></li>`).join("")
+    : `<li class="muted">No burns yet.</li>`;
+}
+
 renderToken();
+renderBurn().catch(() => {});
+setInterval(() => { if (!document.hidden) renderBurn().catch(() => {}); }, 30_000);
 renderRules();
 renderFloors().catch(() => ($("#rail").innerHTML = `<p class="empty">Floor prices are not available right now.</p>`));
 if (location.hash === "#launch") location.replace("launch");
