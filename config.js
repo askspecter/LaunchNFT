@@ -22,4 +22,7 @@ export const CONFIG = {
   collectionsUrl: "collections.json", // names + marketplace slugs for listed collections
   hiddenLaunches: ["0"], // launch ids kept off the site's lists (the contracts still run them)
   x: "olkadotapp", // X / Twitter handle shown in the menu
+  // Reown (WalletConnect) Project ID from https://cloud.reown.com. Public by design.
+  // Empty = fall back to the browser's injected wallet only.
+  reownProjectId: "",
 };

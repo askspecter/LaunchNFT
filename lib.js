@@ -159,7 +159,82 @@ const listeners = new Set();
 export const getAccount = () => account;
 export const onAccount = (fn) => listeners.add(fn);
 
-export async function connect() {
+const setAccount = (addr) => {
+  account = addr ? getAddress(addr) : null;
+  document.querySelectorAll("[data-connect]").forEach((btn) => (($("span", btn) || btn).textContent = account ? short(account) : "Connect wallet"));
+  listeners.forEach((fn) => fn(account));
+};
+const remember = (v) => { try { v ? localStorage.setItem("olka-wallet", v) : localStorage.removeItem("olka-wallet"); } catch { /* storage blocked */ } };
+const remembered = () => { try { return localStorage.getItem("olka-wallet"); } catch { return null; } };
+
+// ---------------------------------------------------------------- Reown AppKit (WalletConnect)
+
+const REOWN_URL = "https://cdn.jsdelivr.net/npm/@reown/appkit-cdn@1.8.24/dist/appkit.js";
+const ROBINHOOD_NETWORK = {
+  id: CONFIG.chainId, name: CONFIG.chainName, chainNamespace: "eip155", caipNetworkId: `eip155:${CONFIG.chainId}`,
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: [CONFIG.rpcUrl] } },
+  blockExplorers: { default: { name: "Blockscout", url: CONFIG.explorer } },
+};
+let kitPromise = null;
+let provider = null; // EIP-1193 provider of the connected wallet
+
+/** Loads AppKit on first use (the bundle is large, so pages do not pay for it up front). */
+function appKit() {
+  kitPromise ||= import(REOWN_URL).then(({ createAppKit, WagmiAdapter }) => {
+    const projectId = CONFIG.reownProjectId;
+    const adapter = new WagmiAdapter({ projectId, networks: [ROBINHOOD_NETWORK] });
+    const kit = createAppKit({
+      adapters: [adapter], networks: [ROBINHOOD_NETWORK], defaultNetwork: ROBINHOOD_NETWORK, projectId,
+      metadata: {
+        name: "Olka", description: "Coins that collect NFTs", url: location.origin,
+        icons: [new URL("assets/brand/olka-512.png", location.href).href],
+      },
+      features: { analytics: false, email: false, socials: false, swaps: false, onramp: false, send: false },
+      themeMode: "light",
+      themeVariables: { "--w3m-accent": "#7b5cff", "--w3m-border-radius-master": "3px", "--w3m-font-family": "Sora, system-ui, sans-serif" },
+    });
+    kit.subscribeAccount((s) => {
+      if (s.isConnected && s.address) {
+        provider = kit.getWalletProvider?.() || provider;
+        remember("reown");
+        if (s.address.toLowerCase() !== account?.toLowerCase()) setAccount(s.address);
+      } else if (!s.isConnected && account) {
+        provider = null;
+        remember(null);
+        setAccount(null);
+      }
+    });
+    kit.subscribeProviders?.((p) => { if (p?.eip155) provider = p.eip155; });
+    return kit;
+  });
+  return kitPromise;
+}
+
+/** Opens the Reown modal and resolves once a wallet is connected (rejects if it is closed first). */
+async function connectReown() {
+  const kit = await appKit();
+  if (!account) {
+    await new Promise((resolve, reject) => {
+      let opened = false;
+      const unsubs = [];
+      const done = (fn) => { unsubs.forEach((u) => typeof u === "function" && u()); fn(); };
+      unsubs.push(kit.subscribeAccount((s) => { if (s.isConnected && s.address) done(resolve); }));
+      unsubs.push(kit.subscribeState((s) => {
+        if (s.open) opened = true;
+        else if (opened && !account) done(() => reject(new Error("Wallet connection cancelled")));
+      }));
+      kit.open();
+    });
+  }
+  provider = kit.getWalletProvider?.() || provider;
+  if (kit.getChainId?.() !== CONFIG.chainId) await kit.switchNetwork(ROBINHOOD_NETWORK).catch(() => {});
+  return account;
+}
+
+// ---------------------------------------------------------------- injected wallet (fallback)
+
+async function connectInjected() {
   if (!window.ethereum) throw new Error("No wallet found — install a browser wallet");
   const [acc] = await window.ethereum.request({ method: "eth_requestAccounts" });
   const hexId = toHex(CONFIG.chainId);
@@ -175,15 +250,31 @@ export async function connect() {
       }],
     });
   }
-  account = getAddress(acc);
-  document.querySelectorAll("[data-connect]").forEach((b) => (($("span", b) || b).textContent = short(account)));
-  listeners.forEach((fn) => fn(account));
+  provider = window.ethereum;
+  setAccount(acc);
   return account;
+}
+
+export async function connect() {
+  return CONFIG.reownProjectId ? connectReown() : connectInjected();
+}
+
+/** Header button: connect, or open the wallet's account view when already connected. */
+export async function openWallet() {
+  if (account && CONFIG.reownProjectId) return (await appKit()).open();
+  return connect();
+}
+
+// Reconnect a Reown session in the background if the visitor connected before.
+if (CONFIG.reownProjectId && remembered() === "reown") {
+  (window.requestIdleCallback || setTimeout)(() => appKit().catch(() => {}));
 }
 
 export async function walletClient() {
   const from = account || (await connect());
-  return createWalletClient({ account: from, chain, transport: custom(window.ethereum) });
+  const transport = provider || window.ethereum;
+  if (!transport) throw new Error("No wallet connected");
+  return createWalletClient({ account: from, chain, transport: custom(transport) });
 }
 
 /** Sends a contract write from the connected wallet and waits for it. */
@@ -245,7 +336,7 @@ export function renderChrome(active) {
     burger.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!menu.classList.contains("open")); });
     document.addEventListener("click", (e) => { if (!header.contains(e.target)) setOpen(false); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
-    $("[data-connect]", header).addEventListener("click", () => connect().catch((e) => toast(e.shortMessage || e.message)));
+    $("[data-connect]", header).addEventListener("click", () => { setOpen(false); openWallet().catch((e) => toast(e.shortMessage || e.message)); });
     if (account) $("[data-connect] span", header).textContent = short(account);
   }
   const footer = $("#site-footer");
