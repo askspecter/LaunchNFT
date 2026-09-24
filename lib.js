@@ -83,9 +83,9 @@ export const ABI = {
     "function claim(address vault, uint256 id, address account, uint256 start, uint256 end, bytes32[] proof)",
   ]),
   extLauncher: parseAbi([
-    "struct Socials { string twitter; string telegram; string discord; string website; string farcaster; }",
-    "struct LaunchParams { string name; string symbol; string logo; string description; Socials socials; uint16 creatorTaxBps; uint256 launchConfigId; bytes32 expectedEconomics; bytes32 salt; uint64 chainId; bytes32 collection; bool isEvm; uint8 policy; }",
-    "function launch(LaunchParams p) payable returns (uint256)",
+    "struct ExtSocials { string twitter; string telegram; string discord; string website; string farcaster; }",
+    "struct ExtLaunchParams { string name; string symbol; string logo; string description; ExtSocials socials; uint16 creatorTaxBps; uint256 launchConfigId; bytes32 expectedEconomics; bytes32 salt; uint64 chainId; bytes32 collection; bool isEvm; uint8 policy; }",
+    "function launch(ExtLaunchParams p) payable returns (uint256)",
     "function launchCount() view returns (uint256)",
     "function launches(uint256) view returns (address token, address curve, address router, address vault, address collection, address creator)",
     "function collectionKey(uint64 chainId, bytes32 collection) pure returns (address)",
@@ -143,7 +143,6 @@ export function friendlyError(err) {
   const raw = [err?.details, err?.shortMessage, err?.cause?.shortMessage, err?.cause?.message, err?.message]
     .find((x) => typeof x === "string" && x.trim()) || "Something went wrong";
   const text = raw.split("\n")[0].replace(/0x[0-9a-fA-F]{40,}/g, "…").trim();
-  if (/address/i.test(raw) && /invalid/i.test(raw)) return "Your wallet did not accept the account address. Disconnect, reconnect your wallet and try again.";
   if (/insufficient funds/i.test(raw)) return "Not enough ETH on Robinhood Chain for the launch fee plus gas.";
   if (/out of gas|gas limit|intrinsic gas|gas required exceeds/i.test(raw)) return "Your wallet set the gas limit too low. Allow about 4,000,000 gas in the wallet's advanced settings and try again.";
   if (/chain|network/i.test(raw) && /mismatch|does not match|unsupported|unrecognized|switch/i.test(raw)) return "Switch your wallet to Robinhood Chain and try again.";
