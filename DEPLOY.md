@@ -1,4 +1,4 @@
-# Deploy LaunchNFT ke Robinhood Chain mainnet
+# Deploy Olka ke Robinhood Chain mainnet
 
 Panduan ini menjalankan semua bagian: kontrak, keeper, dan website. Semua perintah dijalankan dari komputer Anda sendiri, dengan wallet Anda sendiri. **Jangan pernah membagikan private key ke siapa pun, termasuk ke AI.**
 

@@ -213,7 +213,7 @@ export function renderChrome(active) {
   if (header) {
     header.className = "nav";
     header.innerHTML = `
-      <a href="index.html" class="brand">launch<span>nft</span><i>.</i></a>
+      <a href="index.html" class="brand">olka</a>
       <nav class="nav-links" id="navLinks">
         <form class="nav-search" action="collections.html" role="search">
           <input name="q" type="search" placeholder="Search collections" aria-label="Search collections" value="${esc(active === "collections.html" ? new URLSearchParams(location.search).get("q") || "" : "")}" />
@@ -233,11 +233,11 @@ export function renderChrome(active) {
     footer.className = "footer";
     footer.innerHTML = `
       <div>
-        <a href="index.html" class="brand">launch<span>nft</span><i>.</i></a>
+        <a href="index.html" class="brand">olka</a>
         <p>Pons coins on Robinhood Chain whose creator fees buy NFT floors. Vault rules are enforced on-chain.</p>
       </div>
       <div class="foot-links">${NAV.map(([h, l]) => `<a href="${h}">${l}</a>`).join("")}</div>
-      <small>© ${new Date().getFullYear()} LaunchNFT. Not affiliated with Robinhood Markets or Pons. Not financial advice.</small>`;
+      <small>© ${new Date().getFullYear()} Olka. Not affiliated with Robinhood Markets or Pons. Not financial advice.</small>`;
   }
   if (!live) {
     const banner = document.createElement("div");

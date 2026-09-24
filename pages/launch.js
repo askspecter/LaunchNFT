@@ -100,7 +100,7 @@ function renderPreview() {
       <div class="bar3"><i style="width:${pct(s.vault)}%"></i><i style="width:${pct(s.treasury)}%"></i><i style="width:${pct(s.pons)}%"></i></div>
       <ul>
         <li><span class="dot d1"></span>${state.collection ? esc(state.collection.name) : "Collection"} vault<b>${eth(s.vault, 4)} ETH</b></li>
-        <li><span class="dot d2"></span>LaunchNFT treasury<b>${eth(s.treasury, 4)} ETH</b></li>
+        <li><span class="dot d2"></span>Olka treasury<b>${eth(s.treasury, 4)} ETH</b></li>
         <li><span class="dot d3"></span>Pons<b>${eth(s.pons, 4)} ETH</b></li>
       </ul>
       <p class="hint">Pons charges ${(Number(state.pons.curveFeeBps) / 100).toFixed(2)}% per trade and passes 70% of it to your fee router, plus your creator tax. The router sends 80% to the vault and 20% to the treasury. Gas and any Pons launch-block tax are not included.</p>

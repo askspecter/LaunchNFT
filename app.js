@@ -1,5 +1,5 @@
 import {
-  live, $, toast, renderChrome, loadLaunches, coinCard, formatEther,
+  live, $, esc, toast, renderChrome, loadLaunches, coinCard, formatEther, collectionMeta,
 } from "./lib.js";
 
 const RULES = [
@@ -73,6 +73,23 @@ async function refresh() {
   renderStats();
 }
 
+/** Floating cards in the hero: logos of well-known listed collections. */
+const FEATURED = ["rh-machines-575117439", "milady", "pudgypenguins", "mad-lads", "boredapeyachtclub"];
+async function renderStage() {
+  const meta = await collectionMeta();
+  const picks = FEATURED.map((slug) => meta.find((c) => c.slug === slug && c.image)).filter(Boolean);
+  for (const c of meta) if (picks.length < 3 && c.image && !picks.includes(c)) picks.push(c);
+  if (picks.length < 3) return;
+  const [a, b, c] = [picks[1], picks[0], picks[2]];
+  const chains = new Set(meta.map((m) => m.chainId)).size;
+  $("#stage").innerHTML = `
+    <div class="fl f1"><img src="${esc(a.image)}" alt="" /></div>
+    <div class="fl f3"><img src="${esc(c.image)}" alt="" /></div>
+    <div class="fl f2"><span class="holo"></span><img src="${esc(b.image)}" alt="" /></div>
+    <div class="tag"><span class="dot"></span>Collecting from <b>${meta.length} collections</b> on ${chains} chains</div>`;
+}
+
 renderRules();
+renderStage().catch(() => {});
 if (location.hash === "#launch") location.replace("launch.html");
 refresh().catch((e) => toast("Could not load launches: " + (e.shortMessage || e.message)));

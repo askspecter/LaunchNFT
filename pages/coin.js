@@ -30,7 +30,7 @@ async function render() {
   if (id == null) return ($("#coin").innerHTML = `<p class="empty">No coin selected. <a href="explore.html">Explore coins</a>.</p>`);
 
   const l = await loadLaunch(id);
-  document.title = `$${l.symbol} · LaunchNFT`;
+  document.title = `$${l.symbol} · Olka`;
   const registry = await client.readContract({ address: CONFIG.launcher, abi: ABI.launcher, functionName: "registry" });
   const [treasury, supply, raffles, activity, pool] = await Promise.all([
     client.readContract({ address: registry, abi: ABI.registry, functionName: "treasury" }).catch(() => null),

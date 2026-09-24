@@ -1,4 +1,4 @@
-# Menjalankan LaunchNFT hanya dengan HP + GitHub + Vercel
+# Menjalankan Olka hanya dengan HP + GitHub + Vercel
 
 Tidak perlu komputer atau server. Yang dibutuhkan:
 - aplikasi wallet di HP (MetaMask, Rabby, atau Coinbase Wallet) dengan jaringan Robinhood Chain,
