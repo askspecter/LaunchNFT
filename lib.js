@@ -191,6 +191,12 @@ function appKit() {
         icons: [new URL("assets/brand/olka-512.png", location.href).href],
       },
       features: { analytics: false, email: false, socials: false, swaps: false, onramp: false, send: false },
+      // WalletConnect explorer ids: Bitget Wallet, MetaMask, Trust Wallet shown first.
+      featuredWalletIds: [
+        "38f5d18bd8522c244bdd70cb4a68e0e718865155811c043f052fb9f1c51de662",
+        "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96",
+        "4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0",
+      ],
       themeMode: "light",
       themeVariables: { "--w3m-accent": "#7b5cff", "--w3m-border-radius-master": "3px", "--w3m-font-family": "Sora, system-ui, sans-serif" },
     });

@@ -24,5 +24,5 @@ export const CONFIG = {
   x: "olkadotapp", // X / Twitter handle shown in the menu
   // Reown (WalletConnect) Project ID from https://cloud.reown.com. Public by design.
   // Empty = fall back to the browser's injected wallet only.
-  reownProjectId: "",
+  reownProjectId: "5c559ec7c86f657976f14d599d5e66b5",
 };
