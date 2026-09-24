@@ -218,6 +218,9 @@ function appKit() {
         "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96",
         "4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0",
       ],
+      // Don't interrupt browsing with a "Switch Network" popup on every page;
+      // the switch happens once, right before a transaction (see ensureChain).
+      allowUnsupportedChain: true,
       themeMode: "light",
       themeVariables: { "--w3m-accent": "#7b5cff", "--w3m-border-radius-master": "3px", "--w3m-font-family": "Sora, system-ui, sans-serif" },
     });
@@ -255,7 +258,6 @@ async function connectReown() {
     });
   }
   provider = kit.getWalletProvider?.() || provider;
-  if (kit.getChainId?.() !== CONFIG.chainId) await kit.switchNetwork(ROBINHOOD_NETWORK).catch(() => {});
   return account;
 }
 
@@ -297,6 +299,24 @@ if (CONFIG.reownProjectId && remembered() === "reown") {
   (window.requestIdleCallback || setTimeout)(() => appKit().catch(() => {}));
 }
 
+/** Makes sure the wallet is on Robinhood Chain; asks it to switch only when it is not. */
+async function ensureChain(transport) {
+  const hex = await transport.request({ method: "eth_chainId" }).catch(() => null);
+  if (hex && Number(hex) === CONFIG.chainId) return;
+  try {
+    await transport.request({ method: "wallet_switchEthereumChain", params: [{ chainId: toHex(CONFIG.chainId) }] });
+  } catch (err) {
+    if (err?.code !== 4902) throw new Error("Switch your wallet to Robinhood Chain and try again.");
+    await transport.request({
+      method: "wallet_addEthereumChain",
+      params: [{
+        chainId: toHex(CONFIG.chainId), chainName: CONFIG.chainName, rpcUrls: [CONFIG.rpcUrl],
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, blockExplorerUrls: [CONFIG.explorer],
+      }],
+    });
+  }
+}
+
 export async function walletClient() {
   if (!account) await connect();
   const transport = provider || window.ethereum;
@@ -306,6 +326,7 @@ export async function walletClient() {
   const current = normalizeAddress(Array.isArray(accs) ? accs[0] : null);
   if (current && current !== account) setAccount(current);
   if (!account) throw new Error("Connect your wallet first.");
+  await ensureChain(transport);
   return createWalletClient({ account, chain, transport: custom(transport) });
 }
 
