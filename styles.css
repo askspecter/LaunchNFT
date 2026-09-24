@@ -661,3 +661,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .foot-links { gap: 12px 20px; }
 .nav { background: rgba(252, 251, 255, 0.97); }
 .nav::before { background: rgba(246, 245, 251, 0.97); top: -14px; height: 14px; }
+.pv-head .badge-fallback {
+  display: grid; place-items: center; line-height: 1; font-size: 24px; font-weight: 700; color: #fff;
+  background: var(--irid) !important; border: 2px solid #fff; box-shadow: 0 10px 24px rgba(123, 92, 255, 0.3);
+}
+.pv-head img { border: 2px solid #fff; box-shadow: 0 10px 24px rgba(123, 92, 255, 0.25); }
