@@ -138,7 +138,11 @@ export const eth = (wei, dp = 3) => Number(formatEther(wei)).toLocaleString(unde
 export const addrLink = (a, label) => `<a class="mono" href="${CONFIG.explorer}/address/${a}" target="_blank" rel="noopener">${esc(label || short(a))}</a>`;
 export const txLink = (h) => `${CONFIG.explorer}/tx/${h}`;
 
+/** Closing the wallet window or rejecting a request is a choice, not an error: stay quiet. */
+const QUIET = /cancell?ed|user rejected|user denied|rejected the request|request rejected|user closed/i;
+
 export function toast(msg) {
+  if (QUIET.test(String(msg))) return;
   let t = $("#toast");
   if (!t) {
     t = document.createElement("div");
