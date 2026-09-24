@@ -1,5 +1,5 @@
 import {
-  friendlyError,
+  friendlyError, getAddress,
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, walletClient, getAccount, connect,
   listedCollectionsDetailed, loadLaunches, colorFor, eth, toHex, short, chainName, ROBINHOOD,
   externalLive, collectionId, chainIcon, chainBadge, chainIdByName, collectionLogo,
@@ -322,7 +322,7 @@ $("#launchBtn").addEventListener("click", async (e) => {
     const gas = ((await client.estimateContractGas(req)) * 13n) / 10n;
     btn.textContent = "Confirm in your wallet…";
     const hash = await wallet.sendTransaction({
-      to: target, value: fee, gas,
+      account: wallet.account, to: getAddress(target), value: fee, gas,
       data: encodeFunctionData({ abi, functionName: "launch", args }),
     });
     btn.textContent = "Launching…";

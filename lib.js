@@ -143,6 +143,7 @@ export function friendlyError(err) {
   const raw = [err?.details, err?.shortMessage, err?.cause?.shortMessage, err?.cause?.message, err?.message]
     .find((x) => typeof x === "string" && x.trim()) || "Something went wrong";
   const text = raw.split("\n")[0].replace(/0x[0-9a-fA-F]{40,}/g, "…").trim();
+  if (/address/i.test(raw) && /invalid/i.test(raw)) return "Your wallet did not accept the account address. Disconnect, reconnect your wallet and try again.";
   if (/insufficient funds/i.test(raw)) return "Not enough ETH on Robinhood Chain for the launch fee plus gas.";
   if (/out of gas|gas limit|intrinsic gas|gas required exceeds/i.test(raw)) return "Your wallet set the gas limit too low. Allow about 4,000,000 gas in the wallet's advanced settings and try again.";
   if (/chain|network/i.test(raw) && /mismatch|does not match|unsupported|unrecognized|switch/i.test(raw)) return "Switch your wallet to Robinhood Chain and try again.";
@@ -176,8 +177,12 @@ const listeners = new Set();
 export const getAccount = () => account;
 export const onAccount = (fn) => listeners.add(fn);
 
+/** Accepts a plain address or a CAIP-10 id ("eip155:4663:0x…") and returns a checksummed address. */
+const normalizeAddress = (addr) => {
+  try { return addr ? getAddress(String(addr).split(":").pop().trim()) : null; } catch { return null; }
+};
 const setAccount = (addr) => {
-  account = addr ? getAddress(addr) : null;
+  account = normalizeAddress(addr);
   document.querySelectorAll("[data-connect]").forEach((btn) => (($("span", btn) || btn).textContent = account ? short(account) : "Connect wallet"));
   listeners.forEach((fn) => fn(account));
 };
@@ -294,10 +299,15 @@ if (CONFIG.reownProjectId && remembered() === "reown") {
 }
 
 export async function walletClient() {
-  const from = account || (await connect());
+  if (!account) await connect();
   const transport = provider || window.ethereum;
   if (!transport) throw new Error("No wallet connected");
-  return createWalletClient({ account: from, chain, transport: custom(transport) });
+  // Use the account the wallet has selected right now; a remembered session can point at another one.
+  const accs = await transport.request({ method: "eth_accounts" }).catch(() => []);
+  const current = normalizeAddress(Array.isArray(accs) ? accs[0] : null);
+  if (current && current !== account) setAccount(current);
+  if (!account) throw new Error("Connect your wallet first.");
+  return createWalletClient({ account, chain, transport: custom(transport) });
 }
 
 /** Sends a contract write from the connected wallet and waits for it. */
