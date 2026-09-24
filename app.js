@@ -1,5 +1,5 @@
 import {
-  live, $, esc, toast, renderChrome, loadLaunches, coinCard, formatEther, collectionMeta,
+  live, $, esc, toast, renderChrome, loadLaunches, coinCard, formatEther, collectionMeta, collectionKey, chainBadge, CONFIG,
 } from "./lib.js";
 
 const RULES = [
@@ -73,23 +73,71 @@ async function refresh() {
   renderStats();
 }
 
-/** Floating cards in the hero: logos of well-known listed collections. */
-const FEATURED = ["rh-machines-575117439", "milady", "pudgypenguins", "mad-lads", "boredapeyachtclub"];
-async function renderStage() {
-  const meta = await collectionMeta();
-  const picks = FEATURED.map((slug) => meta.find((c) => c.slug === slug && c.image)).filter(Boolean);
-  for (const c of meta) if (picks.length < 3 && c.image && !picks.includes(c)) picks.push(c);
-  if (picks.length < 3) return;
-  const [a, b, c] = [picks[1], picks[0], picks[2]];
-  const chains = new Set(meta.map((m) => m.chainId)).size;
-  $("#stage").innerHTML = `
-    <div class="fl f1"><img src="${esc(a.image)}" alt="" /></div>
-    <div class="fl f3"><img src="${esc(c.image)}" alt="" /></div>
-    <div class="fl f2"><span class="holo"></span><img src="${esc(b.image)}" alt="" /></div>
-    <div class="tag"><span class="dot"></span>Collecting from <b>${meta.length} collections</b> on ${chains} chains</div>`;
+const fmt = (n, dp = 2) => Number(n).toLocaleString(undefined, { maximumFractionDigits: dp });
+const usdFmt = (n) => (n >= 1000 ? `$${fmt(n / 1000, 1)}k` : `$${fmt(n, 0)}`);
+
+async function loadFloors() {
+  const res = await fetch("data/floors.json");
+  if (!res.ok) throw new Error("no floor data");
+  return res.json();
 }
 
+/** 3D stage in the hero: the three most valuable collections by floor. */
+function renderStage(top, total, chains) {
+  if (top.length < 3) return;
+  const [first, second, third] = top;
+  $("#stage").innerHTML = `
+    <div class="card3d c-left"><img src="${esc(second.image)}" alt="" /></div>
+    <div class="card3d c-right"><img src="${esc(third.image)}" alt="" /></div>
+    <div class="card3d c-mid"><span class="holo"></span><img src="${esc(first.image)}" alt="" />
+      <span class="c-label"><span class="c-name">${esc(first.name)}</span><b>${fmt(first.floor)} ${esc(first.symbol)}</b></span></div>
+    <div class="stage-floor"></div>
+    <div class="tag"><span class="dot"></span>Collecting from <b>${total} collections</b> on ${chains} chains</div>`;
+}
+
+/** Horizontally scrollable profiles of the collections with the highest floors. */
+function renderRail(items) {
+  $("#rail").innerHTML = items.map((c, i) => {
+    let key = "";
+    try { key = collectionKey(c.chainId, c.address); } catch { /* unknown chain */ }
+    const os = CONFIG.chains[c.chainId]?.opensea;
+    return `<article class="profile">
+      <div class="p-img"><img src="${esc(c.image || "")}" alt="" loading="lazy" /><span class="p-rank">#${i + 1}</span>${chainBadge(c.chainId)}</div>
+      <div class="p-body">
+        <h3>${esc(c.name)}</h3>
+        <div class="p-floor"><b>${fmt(c.floor, c.floor < 1 ? 3 : 2)} ${esc(c.symbol)}</b>${c.floorUsd ? `<span>≈ ${usdFmt(c.floorUsd)}</span>` : ""}</div>
+        <dl>
+          <div><dt>Owners</dt><dd>${c.owners ? fmt(c.owners, 0) : "—"}</dd></div>
+          <div><dt>7d volume</dt><dd>${fmt(c.volume7d, 1)} ${esc(c.symbol)}</dd></div>
+          <div><dt>7d sales</dt><dd>${fmt(c.sales7d, 0)}</dd></div>
+        </dl>
+        <div class="p-actions">
+          ${key ? `<a class="btn btn-dark" href="launch.html?collection=${key}">Launch a coin</a>` : ""}
+          ${os && c.slug ? `<a class="btn btn-ghost" href="https://opensea.io/collection/${esc(c.slug)}" target="_blank" rel="noopener">OpenSea ↗</a>` : ""}
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+async function renderFloors() {
+  const [data, meta] = await Promise.all([loadFloors(), collectionMeta()]);
+  const items = data.items.filter((c) => c.image && c.floorUsd);
+  const chains = new Set(meta.map((m) => m.chainId)).size;
+  renderStage(items.slice(0, 3), meta.length, chains);
+  renderRail(items.slice(0, 20));
+  const when = new Date(data.updatedAt);
+  $("#floorsNote").textContent = `The most valuable collections a coin can collect. Floors from OpenSea, updated ${when.toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${when.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}.`;
+}
+
+$("#top").addEventListener("click", (e) => {
+  const b = e.target.closest(".rail-btn");
+  if (!b) return;
+  const rail = $("#rail");
+  rail.scrollBy({ left: Number(b.dataset.dir) * rail.clientWidth * 0.85, behavior: "smooth" });
+});
+
 renderRules();
-renderStage().catch(() => {});
+renderFloors().catch(() => ($("#rail").innerHTML = `<p class="empty">Floor prices are not available right now.</p>`));
 if (location.hash === "#launch") location.replace("launch.html");
 refresh().catch((e) => toast("Could not load launches: " + (e.shortMessage || e.message)));

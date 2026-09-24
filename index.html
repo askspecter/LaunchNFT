@@ -8,6 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/brand/favicon-64.png" />
+  <link rel="apple-touch-icon" href="assets/brand/apple-touch-icon.png" />
+  <meta name="theme-color" content="#f6f5fb" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -28,6 +32,20 @@
         <div><b id="statNfts">0</b><span>NFTs collected</span></div>
         <div><b id="statVault">0</b><span>ETH in vaults</span></div>
       </div>
+    </section>
+
+    <section class="section top-nfts" id="top">
+      <div class="row-head">
+        <div>
+          <h2>Top floors</h2>
+          <p class="muted" id="floorsNote">The most valuable collections a coin can collect.</p>
+        </div>
+        <div class="rail-nav">
+          <button class="rail-btn" data-dir="-1" aria-label="Scroll left">←</button>
+          <button class="rail-btn" data-dir="1" aria-label="Scroll right">→</button>
+        </div>
+      </div>
+      <div class="rail" id="rail"><p class="empty">Loading…</p></div>
     </section>
 
     <section class="marquee" id="rules" aria-label="Vault rules">
@@ -68,16 +86,6 @@
       <p class="more"><a class="btn btn-ghost" href="explore.html">View all launches →</a></p>
     </section>
 
-    <section class="section" id="faq">
-      <h2>Questions</h2>
-      <div class="faq">
-        <details><summary>Can the creator withdraw from the vault?</summary><p>No. The vault contract has no withdraw function. Funds can only leave as payment for NFTs from the paired collection.</p></details>
-        <details><summary>Who decides the purchase price?</summary><p>A keeper posts a price ceiling based on recent floor data. The vault refuses any buy above that ceiling, and ceilings expire after one hour.</p></details>
-        <details><summary>What happens to the NFTs?</summary><p>At launch, the creator picks a policy: raffle to holders, hold forever, or burn. The policy is locked once the coin is live.</p></details>
-        <details><summary>How does this use Pons?</summary><p>Each coin is a normal Pons V2 launch on Robinhood Chain. Its creator-fee recipient is a fee router contract with no way to change that recipient. Anyone can call harvest, which sweeps the curve fees, claims them from the Pons escrow and splits them 80/20.</p></details>
-        <details><summary>Is this audited?</summary><p>Not yet. The contracts are open source and tested against a fork of Robinhood Chain mainnet, but they have not had an independent audit.</p></details>
-      </div>
-    </section>
   </main>
 
   <footer id="site-footer"></footer>
