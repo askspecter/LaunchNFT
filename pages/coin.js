@@ -1,6 +1,7 @@
 import {
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, loadLaunch, loadRaffles, write,
   eth, short, addrLink, chainName, chainBadge, ROBINHOOD, collectionLogo, coinArt,
+  getAccount, onAccount, connect, museId, museEmbed, musePage, loadVideo, saveVideo,
 } from "../lib.js";
 import {
   loadActivity, addTimes, mountFeed, summarize, wireCopy, copyBtn, geckoPool, geckoEmbed, geckoPage, ponsPage,
@@ -8,7 +9,10 @@ import {
 
 renderChrome("explore");
 wireCopy();
-const id = new URLSearchParams(location.search).get("id");
+const params = new URLSearchParams(location.search);
+const id = params.get("id");
+// Set by the launch page when the creator skipped signing for the video they entered.
+let pendingVideo = museId(musePage(params.get("video") || ""));
 
 function raffleStatus(r) {
   if (r.claimed) return "Delivered";
@@ -32,12 +36,13 @@ async function render() {
   const l = await loadLaunch(id);
   document.title = `$${l.symbol} · Olka`;
   const registry = await client.readContract({ address: CONFIG.launcher, abi: ABI.launcher, functionName: "registry" });
-  const [treasury, supply, raffles, activity, pool] = await Promise.all([
+  const [treasury, supply, raffles, activity, pool, video] = await Promise.all([
     client.readContract({ address: registry, abi: ABI.registry, functionName: "treasury" }).catch(() => null),
     client.readContract({ address: l.token, abi: ABI.erc20, functionName: "totalSupply" }).catch(() => 0n),
     l.policy === "Raffle" ? loadRaffles(l).catch(() => []) : [],
     loadActivity([l]).catch(() => []),
     geckoPool(l.token, l.curve),
+    loadVideo(l.id),
   ]);
   const s = summarize(activity);
   const drawsDone = raffles.filter((r) => r.claimed).length;
@@ -74,6 +79,7 @@ async function render() {
 
     <div class="coin-grid">
       <div class="coin-main">
+        <div id="videoBox"></div>
         <div class="chart-card">
           <iframe id="chart" title="$${esc(l.symbol)} price chart" src="${geckoEmbed(pool)}" loading="lazy" allow="clipboard-write" allowfullscreen></iframe>
         </div>
@@ -140,6 +146,8 @@ async function render() {
       </aside>
     </div>`;
 
+  mountVideo(l, video);
+
   mountFeed($("#feed"), activity);
   addTimes(activity).then(() => mountFeed($("#feed"), activity)).catch(() => {});
 
@@ -154,6 +162,61 @@ async function render() {
       e.target.disabled = false;
     }
   });
+}
+
+// ------------------------------------------------------------------ muse.ai video
+
+function mountVideo(l, initial) {
+  let video = initial;
+  const box = $("#videoBox");
+  const isCreator = () => !!getAccount() && getAccount().toLowerCase() === l.creator.toLowerCase();
+
+  const draw = () => {
+    const player = video
+      ? `<div class="video-card"><iframe title="$${esc(l.symbol)} video" src="${museEmbed(video)}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`
+      : "";
+    let edit = "";
+    if (isCreator()) {
+      edit = `<details class="video-edit"${pendingVideo ? " open" : ""}>
+        <summary>${video ? "Change the video" : "Add a muse.ai video"}</summary>
+        <div class="video-form">
+          <input id="videoLink" type="url" placeholder="https://muse.ai/v/…" value="${pendingVideo ? esc(musePage(pendingVideo)) : ""}" />
+          <button class="btn btn-dark" id="videoSave">Save</button>
+          ${video ? `<button class="btn btn-ghost" id="videoRemove">Remove</button>` : ""}
+        </div>
+        <p class="muted small">You sign a message with the wallet that launched this coin. No gas.</p>
+      </details>`;
+    } else if (pendingVideo && !getAccount()) {
+      edit = `<div class="card notice">Your video is not attached yet. <button class="btn btn-dark" id="videoConnect">Connect wallet</button></div>`;
+    }
+    box.innerHTML = player + edit;
+
+    $("#videoConnect", box)?.addEventListener("click", () => connect().catch((err) => toast(err.shortMessage || err.message)));
+    const save = async (btn, next) => {
+      btn.disabled = true;
+      try {
+        video = await saveVideo(l.id, next);
+        pendingVideo = null;
+        params.delete("video");
+        history.replaceState(null, "", `${location.pathname}?${params}`);
+        toast(video ? "Video saved" : "Video removed");
+        draw();
+      } catch (err) {
+        toast(err.shortMessage || err.message);
+        btn.disabled = false;
+      }
+    };
+    $("#videoSave", box)?.addEventListener("click", (e) => {
+      const next = museId($("#videoLink", box).value);
+      if (!next) return toast("Paste a muse.ai link like https://muse.ai/v/abc123");
+      save(e.target, next);
+    });
+    $("#videoRemove", box)?.addEventListener("click", (e) => save(e.target, ""));
+  };
+
+  draw();
+  // render() rebuilds the page after a harvest; listeners for a replaced box just do nothing.
+  onAccount(() => document.body.contains(box) && draw());
 }
 
 render().catch((e) => ($("#coin").innerHTML = `<p class="empty">Could not load coin: ${esc(e.shortMessage || e.message)}</p>`));

@@ -371,6 +371,13 @@ a.coin { display: block; }
 .chart-card { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
 .chart-card iframe { display: block; width: 100%; height: 440px; border: 0; }
 @media (max-width: 600px) { .chart-card iframe { height: 340px; } }
+.video-card { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #000; margin-bottom: 16px; aspect-ratio: 16 / 9; }
+.video-card iframe { display: block; width: 100%; height: 100%; border: 0; }
+.video-edit { margin-bottom: 16px; }
+.video-edit summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.video-form { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.video-form input { flex: 1 1 220px; min-width: 0; }
+.video-edit .muted { margin: 8px 0 0; }
 
 .coin-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 80px; }
 @media (max-width: 960px) { .coin-side { position: static; } }

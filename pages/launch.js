@@ -2,7 +2,7 @@ import {
   friendlyError, getAddress,
   CONFIG, ABI, client, $, esc, live, toast, renderChrome, walletClient, getAccount, connect,
   listedCollectionsDetailed, loadLaunches, colorFor, eth, toHex, short, chainName, ROBINHOOD,
-  externalLive, collectionId, chainIcon, chainBadge, chainIdByName, collectionLogo,
+  externalLive, collectionId, chainIcon, chainBadge, chainIdByName, collectionLogo, museId, saveVideo,
 } from "../lib.js";
 import { parseAbi, zeroAddress, encodeFunctionData } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
 
@@ -134,6 +134,7 @@ function renderSummary() {
     ["Collects", state.collection ? `<span class="collects">${collectionLogo(state.collection.name, state.collection.image, 20)}${esc(state.collection.name)} ${chainBadge(state.collection.chainId)}</span>` : "—"],
     ["NFTs", POLICY_NAMES[policy()]],
     ["Creator tax", `${(Number(taxBps()) / 100).toFixed(2)}%`],
+    ...(museId(val("video")) ? [["Video", `muse.ai · ${esc(museId(val("video")))}`]] : []),
   ];
   $("#summary").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
   const s = split();
@@ -174,6 +175,7 @@ function validate(step) {
       const v = val(id);
       if (v && !/^https?:\/\//i.test(v)) return `${id === "logo" ? "Image URL" : id} must start with https://`;
     }
+    if (val("video") && !museId(val("video"))) return "Video: paste a muse.ai link like https://muse.ai/v/abc123";
   }
   if (step === 1 && !state.collection) return "Pick a collection";
   return null;
@@ -333,8 +335,19 @@ $("#launchBtn").addEventListener("click", async (e) => {
         : "Launch transaction failed");
     }
     const count = await client.readContract({ address: target, abi, functionName: "launchCount" });
+    const launchId = `${external ? "e" : ""}${Number(count) - 1}`;
     toast("Launched!");
-    location.href = `coin?id=${external ? "e" : ""}${Number(count) - 1}`;
+    const video = museId(val("video"));
+    let next = `coin?id=${launchId}`;
+    if (video) {
+      btn.textContent = "Sign to attach the video…";
+      // The coin is already live; if the signature is skipped or fails, the coin page offers to retry.
+      await saveVideo(launchId, video).catch((err) => {
+        console.error(err);
+        next += `&video=${encodeURIComponent(video)}`;
+      });
+    }
+    location.href = next;
   } catch (err) {
     console.error(err);
     toast(friendlyError(err));

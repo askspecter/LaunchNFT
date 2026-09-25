@@ -340,6 +340,44 @@ export async function write(req) {
   return receipt;
 }
 
+// ------------------------------------------------------------------ muse.ai video
+
+/** The video id in a muse.ai link (muse.ai/v/<id>, muse.ai/v/<id>-title, muse.ai/embed/<id>), or null. */
+export function museId(link) {
+  const m = String(link || "").trim().match(/^(?:https?:\/\/)?(?:www\.)?muse\.ai\/(?:v|embed)\/([A-Za-z0-9]{4,32})(?:[-/?#]|$)/i);
+  return m ? m[1] : null;
+}
+export const museEmbed = (id) => `https://muse.ai/embed/${encodeURIComponent(id)}`;
+export const musePage = (id) => `https://muse.ai/v/${encodeURIComponent(id)}`;
+
+// Keep in sync with api/video.js.
+const videoMessage = (launch, video, time) => `Olka: set the video for coin ${launch}\nVideo: ${video || "none"}\nTime: ${time}`;
+
+/** The coin's muse.ai video id, or null. `launch` is a launch id as used in coin?id=. */
+export async function loadVideo(launch) {
+  try {
+    const res = await fetch(`/api/video?launch=${encodeURIComponent(launch)}`);
+    return res.ok ? (await res.json()).video || null : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sets (or with an empty `video`, removes) the coin's video. The coin's creator signs a message; no gas. */
+export async function saveVideo(launch, video) {
+  const wallet = await walletClient();
+  const time = Math.floor(Date.now() / 1000);
+  const signature = await wallet.signMessage({ account: wallet.account, message: videoMessage(String(launch), video, time) });
+  const res = await fetch("/api/video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ launch: String(launch), video: video || "", time, signature }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || `Could not save the video (${res.status})`);
+  return json.video;
+}
+
 // ------------------------------------------------------------------ layout
 
 const NAV = [
