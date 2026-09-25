@@ -13,7 +13,12 @@ export const chain = defineChain({
   rpcUrls: { default: { http: [CONFIG.rpcUrl] } },
   blockExplorers: { default: { name: "Blockscout", url: CONFIG.explorer } },
 });
-export const client = createPublicClient({ chain, transport: http() });
+// Pages read dozens of contracts at once. Batching turns them into a few HTTP requests so the public
+// RPC does not rate-limit us (on phones that shows up as "HTTP request failed"), and retries ride out blips.
+export const client = createPublicClient({
+  chain,
+  transport: http(CONFIG.rpcUrl, { batch: { batchSize: 40, wait: 20 }, retryCount: 4, retryDelay: 400, timeout: 20_000 }),
+});
 export const live = isAddress(CONFIG.launcher);
 export const externalLive = isAddress(CONFIG.externalLauncher || "");
 export const ROBINHOOD = CONFIG.chainId;
@@ -575,7 +580,25 @@ export async function loadLaunches(limit = 60) {
     ext = [...Array(Math.min(n, limit)).keys()].map((i) => `e${n - 1 - i}`);
   }
   const hidden = new Set((CONFIG.hiddenLaunches || []).map(String));
-  return Promise.all([...ids, ...ext].filter((id) => !hidden.has(String(id))).map(loadLaunch));
+  const todo = [...ids, ...ext].filter((id) => !hidden.has(String(id)));
+  // A few at a time, and one coin that fails to load is left out instead of failing the whole list.
+  const out = new Array(todo.length);
+  let next = 0, failed = 0, lastError;
+  const worker = async () => {
+    while (next < todo.length) {
+      const i = next++;
+      try {
+        out[i] = await loadLaunch(todo[i]).catch(() => loadLaunch(todo[i]));
+      } catch (e) {
+        failed++;
+        lastError = e;
+        console.error(`Could not load launch ${todo[i]}`, e);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, todo.length) }, worker));
+  if (todo.length && failed === todo.length) throw lastError;
+  return out.filter(Boolean);
 }
 
 /** Explorer link for a transaction on an EVM chain. Solana signatures (64 bytes) do not fit the
