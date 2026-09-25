@@ -16,15 +16,21 @@ export class RateLimited extends Error {
  * renews it before expiry or when OpenSea rejects it.
  */
 export class OpenSea {
-  constructor({ apiKey, chain, log = () => {} }) {
-    this.apiKey = apiKey || null;
-    this.auto = !apiKey;
-    this.expiresAt = Infinity;
-    this.pausedUntil = 0;
+  constructor({ apiKey, chain, log = () => {}, shared }) {
+    // Key and rate-limit state are shared by every per-chain client (see forChain).
+    this.shared = shared || { apiKey: apiKey || null, auto: !apiKey, expiresAt: Infinity, pausedUntil: 0 };
     this.chain = chain;
     this.log = log;
     this.slugs = new Map();
   }
+
+  get apiKey() { return this.shared.apiKey; }
+  set apiKey(v) { this.shared.apiKey = v; }
+  get auto() { return this.shared.auto; }
+  get expiresAt() { return this.shared.expiresAt; }
+  set expiresAt(v) { this.shared.expiresAt = v; }
+  get pausedUntil() { return this.shared.pausedUntil; }
+  set pausedUntil(v) { this.shared.pausedUntil = v; }
 
   async #ensureKey() {
     if (!this.auto || (this.apiKey && Date.now() < this.expiresAt - 3_600_000)) return;
@@ -58,11 +64,8 @@ export class OpenSea {
     if (chain === this.chain) return this;
     this.children ||= new Map();
     if (!this.children.has(chain)) {
-      const child = Object.create(this);
-      child.chain = chain;
-      child.slugs = new Map();
-      child.children = null;
-      this.children.set(chain, child);
+      // A real instance (not Object.create) so private methods like #get work on it.
+      this.children.set(chain, new OpenSea({ chain, log: this.log, shared: this.shared }));
     }
     return this.children.get(chain);
   }

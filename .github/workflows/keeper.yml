@@ -6,7 +6,7 @@
 #                OPENSEA_API_KEY     (optional; empty = auto free-tier key)
 #                KEEPER_SOLANA_KEY   (optional; base58 secret key, only for Solana collections)
 #     Variables (optional): LAUNCHER, START_BLOCK — default to the mainnet deployment below
-#   Optional variables: MAX_CEILING_ETH, CEILING_MARKUP_BPS, MIN_HARVEST_ETH, DRY_RUN
+#   Optional variables: MAX_CEILING_ETH, CEILING_MARKUP_BPS, MIN_HARVEST_ETH
 #
 # Raffle snapshots are committed to snapshots/, which Vercel serves with the site.
 name: keeper
@@ -60,7 +60,8 @@ jobs:
           MAX_CEILING_ETH: ${{ vars.MAX_CEILING_ETH || '0.5' }}
           CEILING_MARKUP_BPS: ${{ vars.CEILING_MARKUP_BPS || '300' }}
           MIN_HARVEST_ETH: ${{ vars.MIN_HARVEST_ETH || '0.005' }}
-          DRY_RUN: ${{ inputs.dry_run && '1' || vars.DRY_RUN || '0' }}
+          # Live on the schedule; simulate only when a manual run ticks "dry_run".
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
           SNAPSHOT_DIR: ../snapshots
         run: node src/index.js --once
 
